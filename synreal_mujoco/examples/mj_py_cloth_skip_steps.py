@@ -2,13 +2,27 @@ import time
 
 import mujoco.viewer
 
+# include parent folder
+import os
+import sys
+
+# include parent directory
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+sys.path.insert(0, parent_dir)
+# include parent folder end
+
 import synreal_mujoco.s3d_mj as s3d_mj
 from synreal_mujoco import cloth_property
 from synreal_mujoco import step_skipper
 
-s3d_mj.log_in_simulation(login_file='../../simulation_login.json') # this line is optional, but a login prompt will pop up latter
+from pathlib import Path
 
-m , d = s3d_mj.load_data('xml_projects/piper_secription_with_cloth/piper_description.xml')
+curr_folder = Path(__file__).parent
+login_file = curr_folder.parent.parent / 'simulation_login.json'
+s3d_mj.log_in_simulation(login_file = login_file) # this line is optional, but a login prompt will pop up latter
+
+mjcf_path = curr_folder /'xml_projects'/'piper_secription_with_cloth'/'piper_description.xml'
+m , d = s3d_mj.load_data(mjcf_path.as_posix())
 
 world = s3d_mj.get_a_sim_world(m)
 

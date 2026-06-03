@@ -23,7 +23,7 @@ class s3d_mj_mapper:
 def _get_geom_parent( m: mujoco.MjModel, d: mujoco.MjData ):
     rigid_body_id=[]
 
-    def collect_rg_id(slot_i,geom_id, mesh_id, rb_id,geom_type):
+    def collect_rg_id( slot_i, geom_id, mesh_id, rb_id , geom_type, geom_name):
         rigid_body_id.append(rb_id)
 
     _mj_data_helper.for_each_geom_mesh(m,d,collect_rg_id)
@@ -61,8 +61,8 @@ def smj_load_data(xml_path, **kwargs):
 
     world = s3d_mj. get_a_sim_world(m)
 
-    sim_cloth, cloth_names = s3d_mj. add_cloth_to_sim(m, d, world, cloth_property_fn)
-    rigid_bodies = s3d_mj. add_rigid_body_to_sim(m, d, world , rb_property_fn, rigidbody_with_convex_hull)
+    sim_cloth, cloth_names = s3d_mj.add_cloth_to_sim(m, d, world )
+    rigid_bodies = s3d_mj.add_rigid_body_to_sim(m, d, world , rb_property_fn, rigidbody_with_convex_hull)
 
     rigid_body_id = _get_geom_parent(m, d)
 

@@ -6,7 +6,7 @@ import numpy as np
 import os
 import sys
 
-# Get parent directory
+# include parent directory
 parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 sys.path.insert(0, parent_dir)
 # include parent folder end
@@ -34,15 +34,15 @@ m,d,s = s3d_scene_builder.build()
 
 l_s3d_scene_stepper = s3d_scene_stepper.s3d_scene_stepper(m,d,s)
 
-with mujoco.viewer. launch_passive(m, d) as viewer:
+with mujoco.viewer.launch_passive(m, d) as viewer:
 
-    while viewer. is_running():
+    while viewer.is_running():
 
-        mujoco. mj_step(m, d)
+        mujoco.mj_step(m, d)
 
-        l_s3d_scene_stepper.set_rigid_body_pos_to_scene()
-        l_s3d_scene_stepper.step_sim()
-        l_s3d_scene_stepper.set_render_pos_to_mujoco()
+        l_s3d_scene_stepper.set_rigidbody_pos_mj_2_s3d()
+        l_s3d_scene_stepper.step_s3d()
+        l_s3d_scene_stepper.set_cloth_pos_s3d_2_mj()
 
-        viewer. sync()
+        viewer.sync()
 

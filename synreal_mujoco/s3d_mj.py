@@ -12,6 +12,7 @@ import synreal_mujoco.data_classes as dc
 import synreal_mujoco.utility as utility
 import synreal_mujoco.cloth_property as cloth_property
 from typing import Callable
+from typing import List
 
 
 def _add_cloth_to_sim(x, t, collision_mask, collision_group, name, world, sim_clothes, cloth_names, fabric_getter):
@@ -171,7 +172,7 @@ def add_rigid_body_to_sim(m, d, world, property_fn = None, rigidbody_with_convex
     utility.report_deprecated(add_rigid_body_to_sim)
 
     if property_fn is None:
-        property_fn = lambda name, attrib: cloth_property.set_rigid_body_property_default(attrib)
+        property_fn = lambda name, attrib: attrib
 
     objects = []
 
@@ -294,9 +295,11 @@ def get_collision_force_from_piece(rigidbody):
 
 
 ################################################################# new ###############################################
-def _add_rigid_body_to_sim(m, d, world, rigidbody_builders : Callable[[str],dc.rigid_body_builder] ):
+def _add_rigid_body_to_sim(m, d, world, rigidbody_builder_fn : Callable[[str,dc.rigid_body_builder],None] ):
 
-    objects = []
+    sim_rigid_bodies = []
+    s3d_rb_2_mujoco_rb : List[int] = []
+
 
     xmat = _mj_data_helper. _mj_get_attr(d, "geom_xmat")
     xpos = _mj_data_helper. _mj_get_attr(d, "geom_xpos")
@@ -308,7 +311,8 @@ def _add_rigid_body_to_sim(m, d, world, rigidbody_builders : Callable[[str],dc.r
 
     def __add_rigid_body( slot_i, geom_id, mesh_id, rb_id , geom_type, geom_name):
 
-        rigid_body_builder = rigidbody_builders(geom_name)
+        rigid_body_builder = dc.rigid_body_builder()
+        rigidbody_builder_fn(geom_name, rigid_body_builder)
 
         geo_pos = xpos[geom_id]
         geo_mat = xmat[geom_id]
@@ -343,19 +347,20 @@ def _add_rigid_body_to_sim(m, d, world, rigidbody_builders : Callable[[str],dc.r
             return
 
 
-        rigid_body. set_attrib(rigid_body_builder.attrib)
+        rigid_body.set_attrib(rigid_body_builder.attrib)
 
-        rigid_body. set_pin(rigid_body_builder.is_fixed)
-        rigid_body. set_collision_group( contype[geom_id] )
-        rigid_body. set_collision_mask( conaffinity[geom_id] )
+        rigid_body.set_pin(rigid_body_builder.is_fixed)
+        rigid_body.set_collision_group( contype[geom_id] )
+        rigid_body.set_collision_mask( conaffinity[geom_id] )
 
-        rigid_body. attach( world )
+        rigid_body.attach( world )
 
-        objects. append( rigid_body )
+        sim_rigid_bodies.append( rigid_body )
+        s3d_rb_2_mujoco_rb.append(rb_id)
 
     _mj_data_helper.for_each_geom_mesh(m, d, __add_rigid_body )
 
-    return  objects
+    return  sim_rigid_bodies, s3d_rb_2_mujoco_rb
 
 
 def _add_cloth_to_sim_2(m, d, world, cloth_property_getter , name_start_with_will_considered_cloth=''):

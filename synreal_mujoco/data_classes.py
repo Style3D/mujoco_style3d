@@ -5,6 +5,7 @@ from typing import Callable
 
 import numpy as np
 import synreal_sim as sim
+import synreal_mujoco.smj as smj
 from synreal_mujoco import cloth_property
 
 @dataclass
@@ -14,6 +15,8 @@ class s3d_scene:
     deformable_body_names : List[str] = field(default_factory=list)
 
     rigid_bodies: List[ sim.RigidBody] = field(default_factory=list)
+    mj_index: List[int] = field(default_factory=list) # index of rigid body in mujoco, the order is the same as rigid_bodies    
+    mapper : smj.s3d_mj_mapper = None
 
     sim_cloth: List[sim.Cloth] = field(default_factory=list)
     cloth_names: List[str] = field(default_factory=list)
@@ -30,6 +33,7 @@ class rigid_body_builder:
 class cloth_builder:
     translate = np.array([0,0,0])
     quat = np.array([1,0,0, 0])
+    rgba =  np.array([1,0.6,0.8,1])
     attrib: sim.ClothAttrib = cloth_property.get_cloth_property_default()
 
 

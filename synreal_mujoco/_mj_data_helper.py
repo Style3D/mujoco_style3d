@@ -1,6 +1,7 @@
 import style3dsim as sim
 import mujoco
 import numpy as np
+from typing import Dict
 
 
 class Flexible:
@@ -145,7 +146,8 @@ def for_each_geom_mesh(m: mujoco.MjModel,d: mujoco.MjData, fn):
         mujoco.mjtGeom.mjGEOM_SPHERE
     ]
 
-    current_geom_num_of_rigidbody = np.zeros(geom_num, dtype=int)
+    #current_geom_num_of_rigidbody = np.zeros(geom_num, dtype=int)
+    current_geom_num_of_rigidbody : Dict[int, int] = {}  
 
     for i in range(geom_num):
 
@@ -164,6 +166,9 @@ def for_each_geom_mesh(m: mujoco.MjModel,d: mujoco.MjData, fn):
         geom_id = i
 
         geom_name = mujoco. mj_id2name(m, mujoco.mjtObj.mjOBJ_BODY, rb_id)
+
+        if rb_id not in current_geom_num_of_rigidbody:
+            current_geom_num_of_rigidbody[rb_id] = 0
 
         curr_num = current_geom_num_of_rigidbody[rb_id]
 
