@@ -1,6 +1,6 @@
 
 import synreal_mujoco.s3d_mj as s3d_mj
-import synreal_mujoco.s3d_scene as s3d_scene
+import synreal_mujoco.s3d_scene_builder as s3d_scene_builder
 import synreal_mujoco._mj_data_helper as _mj_data_helper
 import synreal_mujoco.smj as smj
 
@@ -8,7 +8,7 @@ class s3d_scene_stepper:
     def __init__(self,mujoco_model,mujoco_data,scene):
         self.mujoco_model = mujoco_model
         self.mujoco_data = mujoco_data
-        self.scene : s3d_scene.s3d_scene = scene
+        self.scene : s3d_scene_builder.s3d_scene = scene
 
     def set_mocap_pos(self, mocap_name, pos):
         smj.set_mocap_pos(self.mujoco_model, self.mujoco_data, mocap_name, pos)

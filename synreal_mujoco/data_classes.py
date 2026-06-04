@@ -38,7 +38,7 @@ class cloth_builder:
 
 
 @dataclass
-class deformable_body_builder2:
+class deformable_body_builder:
     attrib = sim.DeformableBodyAttrib()
     collision_faces = None
     get_pos = None  # lambda : positions -> f(positions)

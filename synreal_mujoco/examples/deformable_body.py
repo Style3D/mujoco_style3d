@@ -12,7 +12,7 @@ sys.path.insert(0, parent_dir)
 # include parent folder end
 
 import synreal_mujoco.s3d_mj as s3d_mj
-import synreal_mujoco.s3d_scene as s3d_scene
+import synreal_mujoco.s3d_scene_builder as s3d_scene_builder
 import synreal_mujoco.s3d_scene_stepper as s3d_scene_stepper
 
 from pathlib import Path
@@ -21,7 +21,7 @@ curr_folder=Path(__file__).parent
 login_file = curr_folder.parent.parent / 'simulation_login.json'
 s3d_mj.log_in_simulation(login_file=login_file) # this line is optional, but a login prompt will pop up latter
 
-s3d_scene_builder = s3d_scene.s3d_scene_builder()
+s3d_scene_builder = s3d_scene_builder.s3d_scene_builder()
 s3d_scene_builder.add_mjcf_rigidbodies(curr_folder/'xml_projects/piper_secription/piper_description.xml')
 
 ######### tets

@@ -6,7 +6,6 @@ import synreal_mujoco.cloth_property as cloth_property
 import numpy as np
 from pathlib import Path
 
-import mujoco.viewer
 
 class s3d_mj_mapper:
 

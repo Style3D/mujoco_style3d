@@ -25,7 +25,7 @@ class s3d_scene_builder:
         # deformable body
         self.deformable_body_name_prefix = 'dfm'
         self.deformable_body_files : List[str] = []
-        self.deformable_body_buidlers : List[dc.deformable_body_builder2] = []
+        self.deformable_body_buidlers : List[dc.deformable_body_builder] = []
         self._temp_files: List[str] = []
 
         #rigid body
@@ -60,7 +60,7 @@ class s3d_scene_builder:
     # deformable body
     def add_deformable_body_by_file(self, filename ):
         self.deformable_body_files.append(filename)
-        dfm_builder = dc.deformable_body_builder2()
+        dfm_builder = dc.deformable_body_builder()
         dfm_builder.get_pos = lambda x : x
         dfm_builder.get_rest_pos = lambda x : x
         self.deformable_body_buidlers.append(dfm_builder)

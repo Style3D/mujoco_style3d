@@ -8,7 +8,7 @@ sys.path.insert(0, parent_dir)
 import mujoco.viewer
 import synreal_sim as sim
 import synreal_mujoco.s3d_mj as s3d_mj
-import synreal_mujoco.s3d_scene as s3d_scene
+import synreal_mujoco.s3d_scene_builder as s3d_scene_builder
 import synreal_mujoco.s3d_scene_stepper as s3d_scene_stepper
 import synreal_mujoco.data_classes as dc
 from pathlib import Path
@@ -20,7 +20,7 @@ s3d_mj.log_in_simulation(login_file = login_file) # this line is optional, but a
 
 
 asset_dir = Path(__file__).parent.resolve() / 'xml_projects'
-s3d_scene_builder = s3d_scene.s3d_scene_builder()
+s3d_scene_builder = s3d_scene_builder.s3d_scene_builder()
 
 def rb_builder(name,rb_builder):
     if name == 'link8': #TODO: link8/0 should be ok
