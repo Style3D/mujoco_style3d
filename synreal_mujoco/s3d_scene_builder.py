@@ -93,6 +93,7 @@ class s3d_scene_builder:
             obj = sim.DeformableBody(dfm.pos , dfm.collision_faces, dfm.tets, dfm.rest_pos)
             obj.set_attrib(dfm.attrib)
             scene.deformable_bodies.append(obj)
+            scene.used_vert_of_deformable_body_collision_faces.append(dfm.used_vert_of_deformable_body_collision_faces)
             obj.attach(scene.world)
 
 
@@ -141,25 +142,22 @@ class s3d_scene_builder:
             dfm_builder = self.deformable_body_buidlers[i]
             pos, tets = load_tetrahedrons(dfm_file)
             if dfm_builder.collision_faces is None:
-                faces = compute_boundary_faces(tets)
+                faces, used_vert_of_deformable_body_collision_faces = compute_boundary_faces(tets)
 
             rest_pos = deepcopy(dfm_builder.get_pos(pos))
             curr_pos = deepcopy(dfm_builder.get_pos(pos))
 
             temp_obj_path = mjcf_name + f'_{self.deformable_body_name_prefix}_{i}.obj'
             temp_obj_path = Path(temp_obj_path).as_posix()  
-            s3d_scene_builder._export_surface_to_obj(curr_pos, faces, temp_obj_path)  # export before offset mutates pos
+            s3d_scene_builder._export_surface_to_obj(curr_pos[used_vert_of_deformable_body_collision_faces], faces, temp_obj_path)  # export before offset mutates pos
             self._temp_files.append(temp_obj_path)
 
             name = self.deformable_body_name_prefix +'_' + str(i)
-            #s3d_scene_builder._add_flexcomp_to_worldbody(
-            #    tree, name, os.path.basename(temp_obj_path), np.array([0,0,0]), np.array([1,0,0,0]),np.array([1,0.6,0.8,1]))
-
             s3d_scene_builder._add_flexcomp_to_worldbody(
                 tree, name, temp_obj_path, np.array([0,0,0]), np.array([1,0,0,0]),np.array([1,0.6,0.8,1]))
 
             s.deformable_body_names.append(name)
-            deformable_bodies_param.append(dc.deformable_body_constructor_param(curr_pos, rest_pos, tets, faces,dfm_builder.attrib))
+            deformable_bodies_param.append(dc.deformable_body_constructor_param(curr_pos, rest_pos, tets, faces, used_vert_of_deformable_body_collision_faces,dfm_builder.attrib))
         return deformable_bodies_param
 
 

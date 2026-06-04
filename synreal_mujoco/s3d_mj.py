@@ -103,6 +103,7 @@ def get_a_sim_world(m):
 
 
 def load_data(xml_path):
+    # TODO: crash here ,find out why 
     m = mujoco.MjModel.from_xml_path(xml_path)
     d = mujoco.MjData(m)
     mujoco.mj_forward(m, d)  # so that d is populated by m

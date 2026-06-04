@@ -32,8 +32,8 @@ class s3d_scene_stepper:
             _mj_data_helper.set_cloth_positions(self.mujoco_model, self.mujoco_data, cloth_name, x)
 
 
-        for cloth, cloth_name in zip(self.scene.deformable_bodies, self.scene.deformable_body_names):
-            x = cloth.get_positions()
-            _mj_data_helper.set_cloth_positions(self.mujoco_model, self.mujoco_data, cloth_name, x)
+        for dfm, dfm_name, used_verts in zip(self.scene.deformable_bodies, self.scene.deformable_body_names, self.scene.used_vert_of_deformable_body_collision_faces):
+            x = dfm.get_positions()[used_verts]
+            _mj_data_helper.set_cloth_positions(self.mujoco_model, self.mujoco_data, dfm_name, x)
 
 

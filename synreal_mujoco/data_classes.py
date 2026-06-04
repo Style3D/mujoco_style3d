@@ -13,6 +13,7 @@ class s3d_scene:
     world: sim.World = None
     deformable_bodies: List[ sim.DeformableBody] = field(default_factory=list)
     deformable_body_names : List[str] = field(default_factory=list)
+    used_vert_of_deformable_body_collision_faces : List[np.ndarray] = field(default_factory=list) # 
 
     rigid_bodies: List[ sim.RigidBody] = field(default_factory=list)
     mj_index: List[int] = field(default_factory=list) # index of rigid body in mujoco, the order is the same as rigid_bodies    
@@ -46,9 +47,10 @@ class deformable_body_builder:
 
 
 class deformable_body_constructor_param:
-    def __init__(self, pos, rest_pos, tets, collision_faces,attrib):
+    def __init__(self, pos, rest_pos, tets, collision_faces, used_vert_of_deformable_body_collision_faces,attrib):
         self.pos = pos
         self.rest_pos = rest_pos
         self.tets = tets
         self.collision_faces = collision_faces
+        self.used_vert_of_deformable_body_collision_faces = used_vert_of_deformable_body_collision_faces
         self.attrib = attrib

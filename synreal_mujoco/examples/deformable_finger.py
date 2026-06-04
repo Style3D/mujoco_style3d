@@ -23,13 +23,15 @@ login_file = curr_folder.parent.parent / 'simulation_login.json'
 s3d_mj.log_in_simulation(login_file=login_file) # this line is optional, but a login prompt will pop up latter
 
 s3d_scene_builder = s3d_scene_builder.s3d_scene_builder()
-s3d_scene_builder.add_mjcf_rigidbodies(curr_folder/'xml_projects/TactiSim/DexHand.xml')
+s3d_scene_builder.add_mjcf_rigidbodies(curr_folder/'xml_projects/TactiSim/DexHand_dfm_finger.xml')
 
-########## tets
-#dfm_attrib = s3d_scene_builder.add_deformable_body_by_file(curr_folder/'xml_projects/deformable_finger/assets/tets1.vtk')
-#dfm_attrib.attrib.youngsModulus = 1e5
-##dfm_attrib.get_rest_pos = lambda  x: x # alter rest pos
-#dfm_attrib.get_pos = lambda  x: x + np.array([0,0,0.3]) # alter current pos
+######### tets
+dfm_attrib = s3d_scene_builder.add_deformable_body_by_file(curr_folder/'xml_projects/TactiSim/meshes/dfm_fingertip.vtk')
+#dfm_attrib = s3d_scene_builder.add_deformable_body_by_file(curr_folder/'xml_projects/TactiSim/meshes/tets1.vtk')
+#dfm_attrib = s3d_scene_builder.add_deformable_body_by_file(curr_folder/'xml_projects/piper_secription/tets1.vtk')
+dfm_attrib.attrib.youngsModulus = 1e5
+#dfm_attrib.get_rest_pos = lambda  x: x # alter rest pos
+dfm_attrib.get_pos = lambda  x: x + np.array([0,0,0.3]) # alter current pos
 
 m,d,s = s3d_scene_builder.build()
 
@@ -92,7 +94,7 @@ with mujoco.viewer.launch_passive(m, d) as viewer:
 
     while viewer.is_running():
 
-        process(fi, m,d)
+        process(fi, m, d)
 
         mujoco.mj_step(m, d)
 
