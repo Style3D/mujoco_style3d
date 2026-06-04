@@ -30,6 +30,7 @@ class s3d_scene_builder:
 
         #rigid body
         self.mjcf_file =''
+        self.flexed_mjcf_file = ''
         self.rigidbody_builder_fn : Callable[[str],dc.rigid_body_builder]
 
         #cloth
@@ -146,12 +147,16 @@ class s3d_scene_builder:
             curr_pos = deepcopy(dfm_builder.get_pos(pos))
 
             temp_obj_path = mjcf_name + f'_{self.deformable_body_name_prefix}_{i}.obj'
+            temp_obj_path = Path(temp_obj_path).as_posix()  
             s3d_scene_builder._export_surface_to_obj(curr_pos, faces, temp_obj_path)  # export before offset mutates pos
             self._temp_files.append(temp_obj_path)
 
             name = self.deformable_body_name_prefix +'_' + str(i)
+            #s3d_scene_builder._add_flexcomp_to_worldbody(
+            #    tree, name, os.path.basename(temp_obj_path), np.array([0,0,0]), np.array([1,0,0,0]),np.array([1,0.6,0.8,1]))
+
             s3d_scene_builder._add_flexcomp_to_worldbody(
-                tree, name, os.path.basename(temp_obj_path), np.array([0,0,0]), np.array([1,0,0,0]),np.array([1,0.6,0.8,1]))
+                tree, name, temp_obj_path, np.array([0,0,0]), np.array([1,0,0,0]),np.array([1,0.6,0.8,1]))
 
             s.deformable_body_names.append(name)
             deformable_bodies_param.append(dc.deformable_body_constructor_param(curr_pos, rest_pos, tets, faces,dfm_builder.attrib))
@@ -172,7 +177,7 @@ class s3d_scene_builder:
         out_path = base + '_flex' + ext
         tree.write(out_path)
         self._temp_files.append(out_path)
-        self.mjcf_file = out_path
+        self.flexed_mjcf_file = out_path
 
         return deformable_bodies_param
 
@@ -184,7 +189,7 @@ class s3d_scene_builder:
 
         dfm_bodies_param = self._add_flex_to_mjcf(scene)
 
-        m, d = s3d_mj.load_data(self.mjcf_file)
+        m, d = s3d_mj.load_data(self.flexed_mjcf_file)
 
         for path in self._temp_files:
             os.remove(path)
