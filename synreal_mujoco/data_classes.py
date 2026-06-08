@@ -8,20 +8,6 @@ import synreal_sim as sim
 import synreal_mujoco.smj as smj
 from synreal_mujoco import cloth_property
 
-@dataclass
-class s3d_scene:
-    world: sim.World = None
-    deformable_bodies: List[ sim.DeformableBody] = field(default_factory=list)
-    deformable_body_names : List[str] = field(default_factory=list)
-    used_vert_of_deformable_body_collision_faces : List[np.ndarray] = field(default_factory=list) # 
-
-    rigid_bodies: List[ sim.RigidBody] = field(default_factory=list)
-    mj_index: List[int] = field(default_factory=list) # index of rigid body in mujoco, the order is the same as rigid_bodies    
-    mapper : smj.s3d_mj_mapper = None
-
-    sim_cloth: List[sim.Cloth] = field(default_factory=list)
-    cloth_names: List[str] = field(default_factory=list)
-
 
 @dataclass
 class rigid_body_builder:
@@ -45,6 +31,16 @@ class deformable_body_builder:
     get_pos = None  # lambda : positions -> f(positions)
     get_rest_pos = None # lambda : positions -> f(positions)
 
+@dataclass
+class connect_info:
+    object0 = None  
+    object1 = None  
+    object_type0 = None  
+    object_type1 = None  
+    data_type0 = 'rigid_body_frame' 
+    data_type1 = 'deformable_body_verts' 
+    data0 = None
+    data1 = None
 
 class deformable_body_constructor_param:
     def __init__(self, pos, rest_pos, tets, collision_faces, used_vert_of_deformable_body_collision_faces,attrib):
@@ -54,3 +50,20 @@ class deformable_body_constructor_param:
         self.collision_faces = collision_faces
         self.used_vert_of_deformable_body_collision_faces = used_vert_of_deformable_body_collision_faces
         self.attrib = attrib
+
+
+@dataclass
+class s3d_scene:
+    world: sim.World = None
+    deformable_bodies: List[ sim.DeformableBody] = field(default_factory=list)
+    deformable_body_names : List[str] = field(default_factory=list)
+    used_vert_of_deformable_body_collision_faces : List[np.ndarray] = field(default_factory=list) # 
+
+    rigid_bodies: List[ sim.RigidBody] = field(default_factory=list)
+    mj_index: List[int] = field(default_factory=list) # index of rigid body in mujoco, the order is the same as rigid_bodies    
+    mapper : smj.s3d_mj_mapper = None
+
+    sim_cloth: List[sim.Cloth] = field(default_factory=list)
+    cloth_names: List[str] = field(default_factory=list)
+
+    connect_infos:List[connect_info] = field(default_factory=list)

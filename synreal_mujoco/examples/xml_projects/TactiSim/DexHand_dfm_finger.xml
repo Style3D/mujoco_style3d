@@ -128,10 +128,6 @@
                                                         <joint name="l_f_joint1_4" pos="0 0 0" axis="0 0 1" range="0 1.3" actuatorfrcrange="-10 10"/>
                                                         <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.6 0.6 0.6 1" mesh="l_f_link1_4"/>
                                                         <geom name="l_f_link1_4" type="mesh" rgba="0.6 0.6 0.6 1" mesh="l_f_link1_4"/>
-
-                                                        <geom name="dfm_fingertip" type="mesh" rgba="1 0.3 0.3 0.35" mesh="dfm_fingertip"/> 
-
-<!--
                                                         <body pos="0.0425 -0.0188 -0.0042" quat="0.69101 -0.15003 -0.69101 -0.15003">
                                                             <body name="force1_f1" pos="0 0 0.02">
                                                                 <geom type="mesh"  rgba="1 0.3 0.3 1" mesh="f1"/>
@@ -155,7 +151,6 @@
                                                                 <geom type="mesh"  rgba="1 0.3 0.3 1" mesh="f7"/>
                                                             </body>
                                                         </body>
--->
                                                         <geom size="0.002" pos="0.02 0 0" rgba="1 0 0 1"/>
                                                         <site name="site_l_f_link1_4" pos="0.0143 0.006 0" size="0.0001" type="sphere" rgba="1 0 0 1" zaxis="0.46 1 0"/>
 
@@ -334,6 +329,11 @@
                                                         <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.6 0.6 0.6 1" mesh="l_f_link5_4"/>
                                                         <geom name="l_f_link5_4" type="mesh" rgba="0.6 0.6 0.6 1" mesh="l_f_link5_4" />
 
+<!--
+                                                        <geom name="dfm_fingertip" type="mesh" rgba="1 0.9 0.3 0.35" mesh="dfm_fingertip"/> 
+-->
+
+<!--
                                                         <body name="force5" pos="0.0425 -0.0188 -0.0055" quat="0.69101 -0.15003 -0.69101 -0.15003">
                                                             <body name="force5_f1" pos="0 0 0.02">
                                                                 <geom type="mesh"  rgba="1 0.3 0.3 1" mesh="f1"/>
@@ -357,7 +357,7 @@
                                                                 <geom type="mesh"  rgba="1 0.3 0.3 1" mesh="f7"/>
                                                             </body>
                                                         </body>
-
+-->
                                                         <geom size="0.002" pos="0.02 0 0" rgba="1 0 0 1"/>
                                                         <site name="site_l_f_link5_4" pos="0.0143 0.006 0" size="0.0001" type="sphere" rgba="1 0 0 1" zaxis="0.46 1 0"/>
 

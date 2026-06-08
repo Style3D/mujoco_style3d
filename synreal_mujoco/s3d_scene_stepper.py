@@ -19,6 +19,7 @@ class s3d_scene_stepper:
 
     def set_rigidbody_pos_mj_2_s3d(self):
         s3d_mj.set_rigid_body_pos_to_sim(self.mujoco_model, self.mujoco_data, self.scene.rigid_bodies)
+        s3d_scene_stepper._update_connects(self.mujoco_model, self.mujoco_data, self.scene)
 
     def step_s3d(self):
         self.scene. world. step_sim()
@@ -37,3 +38,16 @@ class s3d_scene_stepper:
             _mj_data_helper.set_cloth_positions(self.mujoco_model, self.mujoco_data, dfm_name, x)
 
 
+    @staticmethod
+    def _update_connects(mujoco_model, mujoco_data, scene):
+        for connect_info in scene.connect_infos:
+            if connect_info.object_type0 == 'rigid_body' and connect_info.object_type1 == 'deformable_body':
+
+                dfm_name = connect_info.object1
+                dfm_body = scene.deformable_bodies[scene.deformable_body_names.index(dfm_name)]
+                rb_id = connect_info.rb_id
+                rb_pos = mujoco_data.geom_xpos[rb_id]
+                rb_mat = mujoco_data.geom_xmat[rb_id].reshape(3, 3)
+                pos = connect_info.data0 @ rb_mat.T + rb_pos
+                indices = connect_info.data1
+                dfm_body.set_positions(pos, indices)

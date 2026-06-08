@@ -22,16 +22,18 @@ curr_folder = Path(__file__).parent
 login_file = curr_folder.parent.parent / 'simulation_login.json'
 s3d_mj.log_in_simulation(login_file=login_file) # this line is optional, but a login prompt will pop up latter
 
+######### rigidbodies
 s3d_scene_builder = s3d_scene_builder.s3d_scene_builder()
 s3d_scene_builder.add_mjcf_rigidbodies(curr_folder/'xml_projects/TactiSim/DexHand_dfm_finger.xml')
 
 ######### tets
 dfm_attrib = s3d_scene_builder.add_deformable_body_by_file(curr_folder/'xml_projects/TactiSim/meshes/dfm_fingertip.vtk')
-#dfm_attrib = s3d_scene_builder.add_deformable_body_by_file(curr_folder/'xml_projects/TactiSim/meshes/tets1.vtk')
-#dfm_attrib = s3d_scene_builder.add_deformable_body_by_file(curr_folder/'xml_projects/piper_secription/tets1.vtk')
 dfm_attrib.attrib.youngsModulus = 1e5
 #dfm_attrib.get_rest_pos = lambda  x: x # alter rest pos
-dfm_attrib.get_pos = lambda  x: x + np.array([0,0,0.3]) # alter current pos
+dfm_attrib.get_pos = lambda  x: x # alter current pos
+
+######### connects
+s3d_scene_builder.add_connect(curr_folder/'xml_projects/TactiSim/meshes/connect_finger_tip.json')
 
 m,d,s = s3d_scene_builder.build()
 
@@ -46,7 +48,7 @@ step_ratio = 0.01
 max_iterations = 1000
 tolerance = 0.001          # 允许的位置误差
 
-ConcateFlag= False
+ConcateFlag = False
 
 def set_ctrl(name, value, Model,Data):
     id = mujoco.mj_name2id(Model, mujoco.mjtObj.mjOBJ_ACTUATOR, name)
