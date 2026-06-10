@@ -14,7 +14,7 @@ def _mj_get_attr(obj, *names):
             return getattr(obj, n)
     raise AttributeError(f"None of attributes present: {names}")
 
-##############
+############## flex ################
 def _get_flex_pos_buffer(d: mujoco.MjData):
     #return _mj_get_attr(d,  "flex_xpos")
     return _mj_get_attr(d, "flexvert_xpos" )
@@ -62,7 +62,7 @@ def _set_flex_vertices(m: mujoco.MjModel, d: mujoco.MjData, flex_name: str, vert
     id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_FLEX, flex_name)
     _set_flex_pos(id, m, d, verts)
 
-##############
+############## mesh ########################
 def _get_mesh_pos(id,m: mujoco.MjModel):
     mesh_vert = _mj_get_attr(m, "mesh_vert")
     vert_begin = _mj_get_attr(m, "mesh_vertadr")
@@ -87,6 +87,7 @@ def _get_mesh_tri(id, m: mujoco.MjModel):
 def _get_geo_num(m: mujoco.MjModel):
     return _mj_get_attr(m, "ngeom")
 
+################## transform ##################
 def to_sim_transfrom(xmat,xpos):
     transform = sim.Transform()
     transform.translation.x = xpos[0]
@@ -104,6 +105,15 @@ def to_sim_transfrom(xmat,xpos):
     transform.rotation = sim.Quat(mat)
     return  transform
 
+# world_pos is nx3
+def get_local_coodinate(world_pos, frame_roation, frame_origin):
+    return ( world_pos - frame_origin ) @ frame_roation
+
+# local_coordinates is nx3
+def get_world_coodinate(local_coordinates, frame_roation, frame_origin):
+    return local_coordinates @ frame_roation.T + frame_origin
+
+################## traverse  ##################
 def for_each_cloth(m: mujoco.MjModel, d: mujoco.MjData, name_start_with_will_considered_cloth, fn ):
     vert_num = _get_flex_vert_num_buffer(m)
 
@@ -165,15 +175,19 @@ def for_each_geom_mesh(m: mujoco.MjModel,d: mujoco.MjData, fn):
         rb_id = rigidbody_id[i]
         geom_id = i
 
-        geom_name = mujoco. mj_id2name(m, mujoco.mjtObj.mjOBJ_BODY, rb_id)
+        rb_name = mujoco. mj_id2name(m, mujoco.mjtObj.mjOBJ_BODY, rb_id)
+        geom_name = mujoco. mj_id2name(m, mujoco.mjtObj.mjOBJ_GEOM, geom_id)
 
         if rb_id not in current_geom_num_of_rigidbody:
             current_geom_num_of_rigidbody[rb_id] = 0
 
         curr_num = current_geom_num_of_rigidbody[rb_id]
 
-        if curr_num > 0:
-            geom_name += '/'+ str(curr_num)
+        full_geom_name = rb_name
+        if  geom_name is not None:
+            full_geom_name = rb_name + '/' + geom_name
+        elif curr_num > 0:
+            full_geom_name += '/'+ str(curr_num)
 
         current_geom_num_of_rigidbody[rb_id] += 1
 
@@ -184,7 +198,7 @@ def for_each_geom_mesh(m: mujoco.MjModel,d: mujoco.MjData, fn):
         # geom_id: geometry id , what is left after filter out
         # mesh_id : mesh id of current geometry if there is any
         # rb_id : rigid boby id of current geometry
-        fn( slot_i, geom_id, mesh_id, rb_id, geom_type[i], geom_name )
+        fn( slot_i, geom_id, mesh_id, rb_id, geom_type[i], full_geom_name )
 
         slot_i += 1
 
@@ -213,6 +227,6 @@ def for_each_rigid_meshes(m: mujoco.MjModel,d: mujoco.MjData, fn):
     for_each_geom_mesh(m,d,rigid_mesh_fn)
 
 
-def set_cloth_positions(m: mujoco.MjModel, d: mujoco.MjData, mesh_name, x):
+def set_flex_positions(m: mujoco.MjModel, d: mujoco.MjData, mesh_name, x):
     _set_flex_vertices(m,d,mesh_name,x)
 

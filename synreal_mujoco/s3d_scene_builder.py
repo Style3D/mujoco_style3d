@@ -79,7 +79,7 @@ class s3d_scene_builder:
 
     @staticmethod
     def _add_rigid_body_to_scene(s : dc.s3d_scene, m, d, rigidbody_builder_fn : Callable[[str,dc.rigid_body_builder], None ]):
-        s.rigid_bodies, s.mj_index = s3d_mj._add_rigid_body_to_sim(m, d, s.world, rigidbody_builder_fn)
+        s.rigid_bodies, s.mj_rb_index, s.mj_geom_index, s.mj_mesh_index, s.rigid_body_names = s3d_mj._add_rigid_body_to_sim(m, d, s.world, rigidbody_builder_fn)
 
 
     @staticmethod
@@ -112,20 +112,11 @@ class s3d_scene_builder:
             obj.set_attrib(dfm.attrib)
             scene.deformable_bodies.append(obj)
             scene.used_vert_of_deformable_body_collision_faces.append(dfm.used_vert_of_deformable_body_collision_faces)
+            scene.deformable_body_collision_faces.append(dfm.collision_faces)
             obj.attach(scene.world)
 
     def _add_connects_to_scene(self, scene : dc.s3d_scene, m, d):
         scene.connect_infos = []
-        rigid_body_name_to_geom_id = {}
-        rigid_body_name_to_mesh_id = {}
-        _mj_data_helper.for_each_geom_mesh(
-            m,
-            d,
-            lambda slot_i, geom_id, mesh_id, rb_id, geom_type, geom_name: (
-                rigid_body_name_to_geom_id.__setitem__(geom_name, geom_id),
-                rigid_body_name_to_mesh_id.__setitem__(geom_name, mesh_id),
-            )
-        )
         for connect_file in self.connect_files:
             with open(connect_file, 'r') as f:
                 data = json.load(f)
@@ -144,27 +135,25 @@ class s3d_scene_builder:
             connect_info.data1 = object1['data']
             scene.connect_infos.append(connect_info)
 
-            if connect_info.object_type0 == 'rigid_body' and connect_info.object_type1 == 'deformable_body':
+            if connect_info.is_deformable_body_attatch_to_rigid_body():
                 dfm_name = connect_info.object1
                 fixed_verts = connect_info.data1
                 dfm_body = scene.deformable_bodies[scene.deformable_body_names.index(dfm_name)]
                 flags = np.array([True for _ in range(len(fixed_verts))])
                 dfm_body.set_pin(flags, fixed_verts)
-                rb_id = rigid_body_name_to_geom_id[connect_info.object0]
-                rb_pos = d.geom_xpos[rb_id]
-                rb_mat = d.geom_xmat[rb_id].reshape(3, 3)
-                connect_info.rb_id = rb_id
 
-                mesh_id = rigid_body_name_to_mesh_id[connect_info.object0]
+                rb_name = connect_info.object0
+
+                dfm_x = dfm_body.get_positions()
+
+                mesh_id = scene.mj_mesh_index[scene.rigid_body_names.index(rb_name)]
                 mesh_quat = m.mesh_quat[mesh_id]
                 mesh_center = m.mesh_pos[mesh_id]
                 mesh_rot = np.empty(9)
                 mujoco.mju_quat2Mat(mesh_rot, mesh_quat)
                 mesh_rot = mesh_rot.reshape(3, 3)
-                #fixed_pos = dfm_body.get_positions()[fixed_verts]
-                fixed_pos = (dfm_body.get_positions()[fixed_verts] - mesh_center) @ mesh_rot
-                #connect_info.data0 = (fixed_pos - rb_pos) @ rb_mat
-                connect_info.data0 = fixed_pos
+                connect_info.data0 = _mj_data_helper.get_local_coodinate(dfm_x, mesh_rot, mesh_center)
+
 
     @staticmethod
     def _export_surface_to_obj(pos, faces, obj_path: str) -> None:
@@ -278,7 +267,7 @@ class s3d_scene_builder:
             scene.sim_cloth,
             scene.cloth_names,
             scene.rigid_bodies,
-            scene.mj_index,
+            scene.mj_rb_index,
             collision_force
         )
 

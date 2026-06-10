@@ -242,7 +242,7 @@ def set_cloth_pos_to_mujoco(m, d, sim_clothes, cloth_names):
 
     for cloth, cloth_name in zip(sim_clothes, cloth_names):
         x = cloth.get_positions()
-        _mj_data_helper.set_cloth_positions(m, d, cloth_name, x)
+        _mj_data_helper.set_flex_positions(m, d, cloth_name, x)
 
 def set_rigid_body_pos_to_sim(m, d,  rigid_bodies):
     last_rigid_body_transform = [rb.get_transform() for rb in rigid_bodies]
@@ -300,6 +300,9 @@ def _add_rigid_body_to_sim(m, d, world, rigidbody_builder_fn : Callable[[str,dc.
 
     sim_rigid_bodies = []
     s3d_rb_2_mujoco_rb : List[int] = []
+    s3d_rb_2_mujoco_geom : List[int] = []
+    s3d_rb_2_mujoco_mesh : List[int] = []
+    rb_names : List[str] = []
 
 
     xmat = _mj_data_helper. _mj_get_attr(d, "geom_xmat")
@@ -358,10 +361,14 @@ def _add_rigid_body_to_sim(m, d, world, rigidbody_builder_fn : Callable[[str,dc.
 
         sim_rigid_bodies.append( rigid_body )
         s3d_rb_2_mujoco_rb.append(rb_id)
+        s3d_rb_2_mujoco_geom.append(geom_id)
+        s3d_rb_2_mujoco_mesh.append(mesh_id)
+        rb_names.append(geom_name)
+
 
     _mj_data_helper.for_each_geom_mesh(m, d, __add_rigid_body )
 
-    return  sim_rigid_bodies, s3d_rb_2_mujoco_rb
+    return  sim_rigid_bodies, s3d_rb_2_mujoco_rb ,s3d_rb_2_mujoco_geom , s3d_rb_2_mujoco_mesh, rb_names
 
 
 def _add_cloth_to_sim_2(m, d, world, cloth_property_getter , name_start_with_will_considered_cloth=''):

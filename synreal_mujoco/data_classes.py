@@ -42,6 +42,9 @@ class connect_info:
     data0 = None
     data1 = None
 
+    def is_deformable_body_attatch_to_rigid_body(self):
+        return self.object_type0 == 'rigid_body' and self.object_type1 == 'deformable_body'
+
 class deformable_body_constructor_param:
     def __init__(self, pos, rest_pos, tets, collision_faces, used_vert_of_deformable_body_collision_faces,attrib):
         self.pos = pos
@@ -58,9 +61,13 @@ class s3d_scene:
     deformable_bodies: List[ sim.DeformableBody] = field(default_factory=list)
     deformable_body_names : List[str] = field(default_factory=list)
     used_vert_of_deformable_body_collision_faces : List[np.ndarray] = field(default_factory=list) # 
+    deformable_body_collision_faces : List[np.ndarray] = field(default_factory=list)
 
     rigid_bodies: List[ sim.RigidBody] = field(default_factory=list)
-    mj_index: List[int] = field(default_factory=list) # index of rigid body in mujoco, the order is the same as rigid_bodies    
+    mj_rb_index: List[int] = field(default_factory=list) # index of rigid body in mujoco, the order is the same as rigid_bodies    
+    mj_geom_index: List[int] = field(default_factory=list) # index of rigid body in mujoco, the order is the same as rigid_bodies    
+    mj_mesh_index: List[int] = field(default_factory=list) # index of rigid body in mujoco, the order is the same as rigid_bodies    
+    rigid_body_names: List[str] = field(default_factory=list)
     mapper : smj.s3d_mj_mapper = None
 
     sim_cloth: List[sim.Cloth] = field(default_factory=list)

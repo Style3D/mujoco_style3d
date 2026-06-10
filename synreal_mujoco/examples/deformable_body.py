@@ -26,7 +26,7 @@ s3d_scene_builder.add_mjcf_rigidbodies(curr_folder/'xml_projects/piper_secriptio
 
 ######### tets
 dfm_attrib = s3d_scene_builder.add_deformable_body_by_file(curr_folder/'xml_projects/piper_secription/tets1.vtk')
-dfm_attrib.attrib.youngsModulus = 1e5
+dfm_attrib.attrib.youngsModulus = 1e6
 #dfm_attrib.get_rest_pos = lambda  x: x # alter rest pos
 dfm_attrib.get_pos = lambda  x: x + np.array([0,0,0.3]) # alter current pos
 
