@@ -57,6 +57,7 @@
         <mesh name="f6" file="F6b.stl" scale=".001 .001 .001"/>
         <mesh name="f7" file="F7b.stl" scale=".001 .001 .001"/>
         <mesh name="dfm_fingertip" file="dfm_fingertip.obj"/>
+        <mesh name="my_cylinder" file="my_cylinder.obj" />
 
         <!-- 材质 -->
         <texture name="grid" type="2d" builtin="checker" width="512" height="512" rgb1=".1 .2 .3" rgb2=".2 .3 .4"/>
@@ -375,9 +376,15 @@
             </body>
         </body>
 
+<!--
         <body name="object" pos="0.756 -0.0546 0.1">
             <joint type="free"/>
             <geom name="object" type="cylinder" size="0.03096 0.1" material="wood" density="540"/>
+        </body>
+-->
+
+        <body name="my_cylinder" pos="0.756 -0.0546 0.1">
+            <geom  name="my_cylinder" type="mesh" mesh="my_cylinder"  rgba="1 0.8 0.2 1.0" friction="0.007"/> 
         </body>
 
     </worldbody>
@@ -634,4 +641,8 @@
         <exclude body1="l_f_link5_2" body2="l_f_link5_4"/>
         <exclude body1="l_f_link5_3" body2="l_f_link5_4"/>
     </contact>
+
+<keyframe>
+</keyframe>
+
 </mujoco>

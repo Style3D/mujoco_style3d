@@ -28,14 +28,31 @@ s3d_scene_builder.add_mjcf_rigidbodies(curr_folder/'xml_projects/TactiSim/DexHan
 
 ######### tets
 dfm_attrib = s3d_scene_builder.add_deformable_body_by_file(curr_folder/'xml_projects/TactiSim/meshes/dfm_fingertip.vtk')
-dfm_attrib.attrib.youngsModulus = 1e5
+dfm_attrib.attrib.youngsModulus = 1e6
 #dfm_attrib.get_rest_pos = lambda  x: x # alter rest pos
 dfm_attrib.get_pos = lambda  x: x # alter current pos
 
 ######### connects
 s3d_scene_builder.add_connect(curr_folder/'xml_projects/TactiSim/meshes/connect_finger_tip.json')
 
-m,d,s = s3d_scene_builder.build()
+m, d, s = s3d_scene_builder.build()
+
+##reset to key frame
+#initial_key_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_KEY, "initial")
+#mujoco.mj_resetDataKeyframe(m, d, initial_key_id)
+#mujoco.mj_forward(m, d)
+
+for name, value in (
+    ("joint1", 0.05),
+    ("joint2", -1.5708 - 0.28),
+    ("joint5", 0.28),
+    ("joint6", 1.5708),
+    ("l_f_joint1_1", 1.5708),
+):
+    joint_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_JOINT, name)
+    d.qpos[m.jnt_qposadr[joint_id]] = value
+mujoco.mj_forward(m, d)
+
 
 l_s3d_scene_stepper = s3d_scene_stepper.s3d_scene_stepper(m,d,s)
 
@@ -57,14 +74,18 @@ def set_ctrl(name, value, Model,Data):
 def process(frame,Model,Data):
     global ConcateFlag
 
-    if  frame == 10:
-        set_ctrl("mot_joint1", 0.05, Model,Data)
-        set_ctrl("mot_joint2", -1.5708-0.28, Model,Data)
-        set_ctrl("mot_joint5", 0.28, Model,Data)
-        set_ctrl("mot_joint6", 1.5708, Model,Data)
-        set_ctrl("act_joint1_1", 1.5708, Model,Data)
+    if  frame == 0:
+        for name, value in (
+            ("mot_joint1", 0.05),
+            ("mot_joint2", -1.5708 - 0.28),
+            ("mot_joint5", 0.28),
+            ("mot_joint6", 1.5708),
+            ("act_joint1_1", 1.5708),
+        ):
+            set_ctrl(name, value, Model,Data)
+        pass
 
-    elif frame == 1000:
+    elif frame == 100:
         set_ctrl("mot_joint1", 0.00, Model,Data)
         ConcateFlag = True
 
@@ -103,6 +124,8 @@ with mujoco.viewer.launch_passive(m, d) as viewer:
         l_s3d_scene_stepper.set_rigidbody_pos_mj_2_s3d()
         l_s3d_scene_stepper.step_s3d()
         l_s3d_scene_stepper.set_cloth_pos_s3d_2_mj()
+
+#TODO: output the whole scene to .obj when I press '1' 
 
         viewer.sync()
 
