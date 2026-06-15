@@ -46,7 +46,7 @@ class sim_frozen_cloth:
         self.cloth_attrib.density = attrib.mass  
         self.cloth_attrib.static_friction = attrib.static_friction  
         self.cloth_attrib.dynamic_friction = attrib.dynamic_friction  
-        self.cloth_attrib.thickness = 1e-3    
+        self.cloth_attrib.thickness = 3e-3    
         self.cloth_attrib.stretch_stiff = sim.Vec3f(1e3,1e3,1e3) # stretching stiffness 
         self.cloth.set_attrib(self.cloth_attrib)
 

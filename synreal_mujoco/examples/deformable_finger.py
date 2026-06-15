@@ -135,8 +135,6 @@ class stress_viewer:
         dfm_x = stepper.get_deformable_body_positions_in_rigidbody_frame('dfm_fingertip','l_f_link5_4/l_f_link5_4')
         dfm_stress = stepper.get_deformable_body_stress('dfm_fingertip')
 
-        #dfm_stress[0:20] = np.arange(20) * 0.01 *fi
-
         dfm_x = np.asarray(dfm_x)
         dfm_color = np.asarray(dfm_stress)
         if dfm_color.ndim > 1:

@@ -96,6 +96,8 @@ def get_a_sim_world(m):
     world_attrib.enable_collision_force_map_rigidbody_piece = True
     world_attrib.enable_plastic_bending = False
     world_attrib.enable_volume_conserve = False
+    world_attrib.enable_deformable_body_stress_map = True
+
 
     world.set_attrib(world_attrib)
 
