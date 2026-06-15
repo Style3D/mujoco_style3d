@@ -34,7 +34,7 @@ class s3d_scene_stepper:
                 sim.OutputVars.Positions,
                 sim.OutputVars.Transforms,
                 sim.OutputVars.CollisionForceRigidBoydCloth,
-                sim.OutputVars.AvatarStressMapCloth
+                sim.OutputVars.AvatarStressMapObstacle
             ])
 
         for cloth, cloth_name in zip(self.scene.sim_cloth, self.scene.cloth_names):

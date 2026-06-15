@@ -33,11 +33,17 @@ s3d_scene_builder.add_mjcf_rigidbodies(curr_folder/'xml_projects/TactiSim/DexHan
 ######### tets
 dfm_file = curr_folder/'xml_projects/TactiSim/meshes/dfm_fingertip.vtk'
 dfm_attrib = s3d_scene_builder.add_deformable_body_by_file(dfm_file)
-dfm_attrib.attrib.youngsModulus = 1e8
+dfm_attrib.attrib.youngsModulus = 1e6
 #dfm_attrib.get_rest_pos = lambda  x: x # alter rest pos
 dfm_attrib.get_pos = lambda  x: x # alter current pos
 _, dfm_tets = load_tetrahedrons(dfm_file)
 dfm_faces, _ = compute_boundary_faces(dfm_tets)
+
+########### cloth
+##cloth_builder = s3d_scene_builder.add_cloth_by_file( curr_folder / 'xml_projects' / 'clothes'/ '50k_plane.obj')
+##cloth_builder = s3d_scene_builder.add_cloth_by_file( curr_folder / 'xml_projects' / 'TactiSim'/ 'meshes' / 'my_cylinder.obj')
+#cloth_builder.translate = np.array([-0.8, -2.0, 0.25])
+#cloth_builder.quat = np.array([1,0,0,0])
 
 ######### connects
 s3d_scene_builder.add_connect(curr_folder/'xml_projects/TactiSim/meshes/connect_finger_tip.json')
@@ -113,7 +119,7 @@ class controller:
             Data.ctrl[6:21] = self.current_qpos
             if all_reached:
                 print("所有关节已到达目标位置")
-                ConcateFlag = False
+                self.ConcateFlag = False
 
 
 
@@ -129,7 +135,7 @@ class stress_viewer:
         dfm_x = stepper.get_deformable_body_positions_in_rigidbody_frame('dfm_fingertip','l_f_link5_4/l_f_link5_4')
         dfm_stress = stepper.get_deformable_body_stress('dfm_fingertip')
 
-        dfm_stress[0:20] = np.arange(20) * 0.01 *fi
+        #dfm_stress[0:20] = np.arange(20) * 0.01 *fi
 
         dfm_x = np.asarray(dfm_x)
         dfm_color = np.asarray(dfm_stress)
@@ -205,7 +211,7 @@ l_s3d_scene_stepper.reset_deformable_body_to_connected_pos('l_f_link5_4/l_f_link
 
 s_viewer = stress_viewer()
 
-with mujoco.viewer.launch_passive(m, d, key_callback=key_callback) as viewer:
+with mujoco.viewer.launch_passive(m, d, key_callback = key_callback) as viewer:
 
     fi = 0
 

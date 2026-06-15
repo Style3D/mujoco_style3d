@@ -24,6 +24,18 @@ from synreal_mujoco.utility import kwargs_helper
 
 xml_prefix_cloth = 'cloth'
 xml_prefix_deformable_body = 'dfm'
+
+
+def _read_uv_from_obj(obj_file):
+    uv = []
+    with open(obj_file, 'r') as f:
+        for line in f:
+            if line[:3] == 'vt ':
+                values = line.split()
+                uv.append((float(values[1]), float(values[2])))
+    return np.asarray(uv, dtype=float)
+
+
 class s3d_scene_builder:
     def __init__(self  ):
 
@@ -40,6 +52,8 @@ class s3d_scene_builder:
         #cloth
         self.cloth_files = []
         self.cloth_builder_map : Dict[str, dc.cloth_builder] = {}
+        self.cloth_uv = {}
+        self.use_uv = []
 
         # connects
         self.connect_files = []
@@ -57,11 +71,12 @@ class s3d_scene_builder:
             self.rigidbody_builder_fn = kw_helper.get('rigidbody_builder_fn', lambda name, rigidbody_builder : None)
 
     # clothes
-    def add_cloth_by_file(self, filename ):
+    def add_cloth_by_file(self, filename, use_uv = False):
         self.cloth_files.append(filename)
         builder = dc.cloth_builder()
         name = s3d_scene_builder._get_file_name(filename)
         self.cloth_builder_map[name] = builder
+        self.use_uv.append(use_uv)
         return builder
 
     # deformable body
@@ -97,12 +112,12 @@ class s3d_scene_builder:
         return file_base_name.removeprefix(prefix+'_')
 
     @staticmethod
-    def _add_cloth_to_scene(s : dc.s3d_scene, m, d , attrib_map, name_start_with_will_considered_cloth):
+    def _add_cloth_to_scene(s : dc.s3d_scene, m, d , attrib_map, get_cloth_uv, name_start_with_will_considered_cloth):
 
-        def __attrib_getter (name ):
+        def __get_attrib (name ):
            return attrib_map[s3d_scene_builder._xml_name_2_name(xml_prefix_cloth, name)].attrib
 
-        s.sim_cloth, s.cloth_names = s3d_mj._add_cloth_to_sim_2( m, d, s.world,  __attrib_getter , name_start_with_will_considered_cloth )
+        s.sim_cloth, s.cloth_names = s3d_mj._add_cloth_to_sim_2( m, d, s.world,  __get_attrib , get_cloth_uv, name_start_with_will_considered_cloth )
 
 
     def _add_deformable_body_to_scene(self, scene : dc.s3d_scene, dfm_body_params):
@@ -238,12 +253,29 @@ class s3d_scene_builder:
         return deformable_bodies_param
 
 
+    def _compute_cloth_uv(self):
+        for cloth_file, use_uv in zip(self.cloth_files, self.use_uv):
+            name = s3d_scene_builder._get_file_name(cloth_file)
+            if  not use_uv:
+                self.cloth_uv[name] = None
+                continue
+
+            uv = []
+            if str(cloth_file.suffix) == '.obj':
+                uv = _read_uv_from_obj(cloth_file)
+            if len(uv) == 0:
+                self.cloth_uv[name] = None
+            else:
+                self.cloth_uv[name] = uv
+
     # build
     def build(self ):
 
         scene = dc.s3d_scene()
 
         dfm_bodies_param = self._add_flex_to_mjcf(scene)
+
+        self._compute_cloth_uv()
 
         m, d = s3d_mj.load_data(self.flexed_mjcf_file)
 
@@ -255,7 +287,11 @@ class s3d_scene_builder:
 
         s3d_scene_builder._add_rigid_body_to_scene(scene, m, d, self.rigidbody_builder_fn )
 
-        s3d_scene_builder._add_cloth_to_scene(scene, m, d, self.cloth_builder_map, xml_prefix_cloth)
+        def get_cloth_uv(xml_name):
+            name = self._xml_name_2_name(xml_prefix_cloth,xml_name)
+            return self.cloth_uv[name]
+
+        s3d_scene_builder._add_cloth_to_scene(scene, m, d, self.cloth_builder_map, get_cloth_uv, xml_prefix_cloth)
 
         self._add_deformable_body_to_scene(scene, dfm_bodies_param)
 

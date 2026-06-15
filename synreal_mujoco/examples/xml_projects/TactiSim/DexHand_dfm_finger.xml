@@ -384,7 +384,8 @@
 -->
 
         <body name="my_cylinder" pos="0.756 -0.0546 0.1">
-            <geom  name="my_cylinder" type="mesh" mesh="my_cylinder"  rgba="1 0.8 0.2 1.0" friction="0.007"/> 
+              <geom  name="my_cylinder_FrozenCloth" type="mesh" mesh="my_cylinder"  rgba="1 0.8 0.2 1.0" friction="0.007"/>   
+             <!-- <geom  name="my_cylinder" type="mesh" mesh="my_cylinder"  rgba="1 0.8 0.2 1.0" friction="0.007"/>     -->
         </body>
 
     </worldbody>

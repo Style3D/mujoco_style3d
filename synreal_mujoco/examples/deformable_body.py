@@ -30,6 +30,11 @@ dfm_attrib.attrib.youngsModulus = 1e6
 #dfm_attrib.get_rest_pos = lambda  x: x # alter rest pos
 dfm_attrib.get_pos = lambda  x: x + np.array([0,0,0.3]) # alter current pos
 
+########## cloth
+#cloth_builder = s3d_scene_builder.add_cloth_by_file( curr_folder / 'xml_projects' / 'clothes'/ '50k_plane.obj')
+#cloth_builder.translate = np.array([-0.8, -2.0, 0.25])
+#cloth_builder.quat = np.array([1,0,0,0])
+
 m,d,s = s3d_scene_builder.build()
 
 l_s3d_scene_stepper = s3d_scene_stepper.s3d_scene_stepper(m,d,s)

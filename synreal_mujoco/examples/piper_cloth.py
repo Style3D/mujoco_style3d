@@ -30,12 +30,14 @@ def rb_builder(name,rb_builder):
 s3d_scene_builder.add_mjcf_rigidbodies( asset_dir/ 'piper_secription'/'piper_description.xml', rigidbody_builder_fn = rb_builder)
 
 ######### cloth
-cloth_builder = s3d_scene_builder.add_cloth_by_file( asset_dir / 'clothes'/ '50k_plane.obj')
+cloth_builder = s3d_scene_builder.add_cloth_by_file( asset_dir / 'clothes'/ '50k_plane.obj' )
 cloth_builder.translate = np.array([-0.8, -2.0, 0.15])
+#cloth_builder = s3d_scene_builder.add_cloth_by_file( asset_dir / 'TactiSim'/'meshes'/ 'my_cylinder.obj' )
+#cloth_builder.translate = np.array([0.0, -0.0, 0.4])
 cloth_builder.quat = np.array([1,0,0,0])
 cloth_builder.attrib.bend_stiff = sim.Vec3f(1e-6, 1e-6, 1e-6)
 
-m,d,s = s3d_scene_builder.build()
+m, d, s = s3d_scene_builder.build()
 
 l_s3d_scene_stepper = s3d_scene_stepper.s3d_scene_stepper(m,d,s)
 

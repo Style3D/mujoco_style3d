@@ -209,7 +209,7 @@ def for_each_rigid_meshes(m: mujoco.MjModel,d: mujoco.MjData, fn):
     contype = _mj_get_attr(m, "geom_contype")
     conaffinity =  _mj_get_attr(m,"geom_conaffinity")
 
-    def rigid_mesh_fn(slot_i, geom_id, mesh_id, rb_id, geom_type,geom_name):
+    def rigid_mesh_fn(slot_i, geom_id, mesh_id, rb_id, geom_type, geom_name):
 
         if geom_type == mujoco.mjtGeom.mjGEOM_MESH:
 
@@ -224,9 +224,9 @@ def for_each_rigid_meshes(m: mujoco.MjModel,d: mujoco.MjData, fn):
 
             fn( rigid_i = slot_i, x=x, t=t, geo_mat=geo_mat, geo_pos=geo_pos, collision_mask = conaffinity[geom_id], collision_group = contype[geom_id])
 
-    for_each_geom_mesh(m,d,rigid_mesh_fn)
+    for_each_geom_mesh(m, d, rigid_mesh_fn)
 
 
 def set_flex_positions(m: mujoco.MjModel, d: mujoco.MjData, mesh_name, x):
-    _set_flex_vertices(m,d,mesh_name,x)
+    _set_flex_vertices(m, d, mesh_name, x)
 

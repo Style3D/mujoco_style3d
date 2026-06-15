@@ -11,13 +11,17 @@ import synreal_mujoco._mj_data_helper as _mj_data_helper
 import synreal_mujoco.data_classes as dc
 import synreal_mujoco.utility as utility
 import synreal_mujoco.cloth_property as cloth_property
+import synreal_mujoco.sim_rigidbody as sim_rigidbody
 from typing import Callable
 from typing import List
 
 
-def _add_cloth_to_sim(x, t, collision_mask, collision_group, name, world, sim_clothes, cloth_names, fabric_getter):
+def _add_cloth_to_sim(x, t, collision_mask, collision_group, name, world, sim_clothes, cloth_names, fabric_getter, get_cloth_uv = None):
 
-    cloth = sim.Cloth(t, x, np.array([], dtype = float), False)
+    if get_cloth_uv is not None and get_cloth_uv(name) is not None:
+        cloth = sim.Cloth(t, x, get_cloth_uv(name), False)
+    else:
+        cloth = sim.Cloth(t, x, np.array([], dtype = float), False)
 
     cloth_attrib = fabric_getter(name )
 
@@ -90,10 +94,8 @@ def get_a_sim_world(m):
     world_attrib.time_step = m.opt.timestep
     world_attrib.enable_rigid_self_collision = False
     world_attrib.enable_collision_force_map_rigidbody_piece = True
-    if hasattr(world_attrib, "enable_plastic_bending"):
-        world_attrib.enable_plastic_bending = True
-    if hasattr(world_attrib, "enable_volume_conserve"):
-        world_attrib.enable_volume_conserve = True
+    world_attrib.enable_plastic_bending = False
+    world_attrib.enable_volume_conserve = False
 
     world.set_attrib(world_attrib)
 
@@ -331,7 +333,8 @@ def _add_rigid_body_to_sim(m, d, world, rigidbody_builder_fn : Callable[[str,dc.
                     x, t = extract_convex_hull(m, mesh_id)
 
             mesh = sim.Mesh(t, x)
-            rigid_body = sim.RigidBody(mesh, transform)
+            use_frozen_cloth = geom_name.endswith('FrozenCloth')
+            rigid_body = sim_rigidbody.sim_rigidbody(mesh, transform, use_frozen_cloth = use_frozen_cloth)
 
         elif geom_type == mujoco.mjtGeom.mjGEOM_SPHERE:
             sphereSize = sim.SphereSize()
@@ -354,12 +357,12 @@ def _add_rigid_body_to_sim(m, d, world, rigidbody_builder_fn : Callable[[str,dc.
         rigid_body.set_attrib(rigid_body_builder.attrib)
 
         rigid_body.set_pin(rigid_body_builder.is_fixed)
-        rigid_body.set_collision_group( contype[geom_id] )
-        rigid_body.set_collision_mask( conaffinity[geom_id] )
+        rigid_body.set_collision_group(contype[geom_id])
+        rigid_body.set_collision_mask(conaffinity[geom_id])
 
-        rigid_body.attach( world )
+        rigid_body.attach(world)
 
-        sim_rigid_bodies.append( rigid_body )
+        sim_rigid_bodies.append(rigid_body)
         s3d_rb_2_mujoco_rb.append(rb_id)
         s3d_rb_2_mujoco_geom.append(geom_id)
         s3d_rb_2_mujoco_mesh.append(mesh_id)
@@ -371,10 +374,10 @@ def _add_rigid_body_to_sim(m, d, world, rigidbody_builder_fn : Callable[[str,dc.
     return  sim_rigid_bodies, s3d_rb_2_mujoco_rb ,s3d_rb_2_mujoco_geom , s3d_rb_2_mujoco_mesh, rb_names
 
 
-def _add_cloth_to_sim_2(m, d, world, cloth_property_getter , name_start_with_will_considered_cloth=''):
+def _add_cloth_to_sim_2(m, d, world, cloth_property_getter, get_cloth_uv, name_start_with_will_considered_cloth=''):
 
     sim_clothes = []
     cloth_names = []
-    add_cloth = lambda x, t, collision_mask, collision_group, name :_add_cloth_to_sim(x, t, collision_mask, collision_group, name, world, sim_clothes, cloth_names, cloth_property_getter)
-    _mj_data_helper.for_each_cloth(m, d,name_start_with_will_considered_cloth, add_cloth  )
-    return sim_clothes,cloth_names
+    add_cloth = lambda x, t, collision_mask, collision_group, name :_add_cloth_to_sim(x, t, collision_mask, collision_group, name, world, sim_clothes, cloth_names, cloth_property_getter, get_cloth_uv)
+    _mj_data_helper.for_each_cloth( m, d, name_start_with_will_considered_cloth, add_cloth  )
+    return sim_clothes, cloth_names
