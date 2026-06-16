@@ -1,94 +1,202 @@
+from dataclasses import dataclass
 
-import synreal_mujoco.s3d_mj as s3d_mj
-import synreal_mujoco.s3d_scene_builder as s3d_scene_builder
-import synreal_mujoco._mj_data_helper as _mj_data_helper
-import synreal_mujoco.smj as smj
-import synreal_sim as sim
 import numpy as np
+import synreal_sim as sim
+
+import synreal_mujoco._mj_data_helper as _mj_data_helper
+import synreal_mujoco.s3d_scene_builder as s3d_scene_builder
+import synreal_mujoco.smj as smj
+
+
+@dataclass(frozen=True)
+class _DeformableRigidAttachment:
+    deformable_body: object
+    rigid_geom_id: int
+    local_coords: np.ndarray
+    vertex_indices: np.ndarray
+
 
 class s3d_scene_stepper:
-    def __init__(self,mujoco_model,mujoco_data,scene):
+    def __init__(self, mujoco_model, mujoco_data, scene):
         self.mujoco_model = mujoco_model
         self.mujoco_data = mujoco_data
-        self.scene : s3d_scene_builder.s3d_scene = scene
-        self._stress_mesh_collections = {}
+        self.scene: s3d_scene_builder.s3d_scene = scene
 
+        self._cache_scene_lookups()
+        self._attachments = self._build_deformable_rigid_attachments()
+        self._last_rigid_body_transforms = [
+            rigid_body.get_transform() for rigid_body in scene.rigid_bodies
+        ]
 
     def set_mocap_pos(self, mocap_name, pos):
         smj.set_mocap_pos(self.mujoco_model, self.mujoco_data, mocap_name, pos)
 
     def update_force_2_mujoco(self):
-        smj.update_rigidbody_cloth_collision_force(self.mujoco_model, self.mujoco_data, self.scene.mapper)
-        smj.apply_collision_force_to_rigidbody(self.mujoco_model, self.mujoco_data, self.scene.mapper) ## cloth affacts rigid body
+        smj.update_rigidbody_cloth_collision_force(
+            self.mujoco_model,
+            self.mujoco_data,
+            self.scene.mapper,
+        )
+        smj.apply_collision_force_to_rigidbody(
+            self.mujoco_model,
+            self.mujoco_data,
+            self.scene.mapper,
+        )
 
     def set_rigidbody_pos_mj_2_s3d(self):
-        s3d_mj.set_rigid_body_pos_to_sim(self.mujoco_model, self.mujoco_data, self.scene.rigid_bodies)
-        s3d_scene_stepper._update_connects(self.mujoco_model, self.mujoco_data, self.scene)
+        geom_xmat = self.mujoco_data.geom_xmat
+        geom_xpos = self.mujoco_data.geom_xpos
+
+        for index, rigid_body, geom_id in self._iter_rigid_body_geoms():
+            current_transform = _mj_data_helper.to_sim_transfrom(
+                geom_xmat[geom_id],
+                geom_xpos[geom_id],
+            )
+            rigid_body.move(self._last_rigid_body_transforms[index], current_transform)
+            self._last_rigid_body_transforms[index] = current_transform
+
+        self._update_attached_deformable_bodies()
 
     def step_s3d(self):
-        self.scene. world. step_sim()
+        self.scene.world.step_sim()
 
-
-    def set_cloth_pos_s3d_2_mj(self ):
-        self.scene.world.fetch_sim(0, [
-                sim.OutputVars.Positions,
-                sim.OutputVars.Transforms,
-                sim.OutputVars.CollisionForceRigidBoydCloth,
-                sim.OutputVars.AvatarStressMapObstacle,
-                sim.OutputVars.AvatarStressMapCloth
-            ])
-
-        for cloth, cloth_name in zip(self.scene.sim_cloth, self.scene.cloth_names):
-            x = cloth.get_positions()
-            _mj_data_helper.set_flex_positions(self.mujoco_model, self.mujoco_data, cloth_name, x)
-
-        for dfm, dfm_name, used_verts in zip(self.scene.deformable_bodies, self.scene.deformable_body_names, self.scene.used_vert_of_deformable_body_collision_faces):
-            x = dfm.get_positions()
-            x = x[used_verts]
-            name = s3d_scene_builder._name_2_xml_name(s3d_scene_builder.xml_prefix_deformable_body, dfm_name)
-            _mj_data_helper.set_flex_positions(self.mujoco_model, self.mujoco_data, name, x)
+    def set_cloth_pos_s3d_2_mj(self, include_stress=True):
+        self._fetch_s3d_outputs(include_stress)
+        self._copy_cloth_positions_to_mujoco()
+        self._copy_deformable_body_positions_to_mujoco()
 
     def get_deformable_body_positions_in_rigidbody_frame(self, dfm_name, rigidbody_name):
+        positions = self._deformable_body_by_name[dfm_name].get_positions()
+        geom_id = self._rigid_body_geom_by_name[rigidbody_name]
 
-        dfm = self.scene.deformable_bodies[self.scene.deformable_body_names.index(dfm_name)]
+        if geom_id is None:
+            return positions
 
-        x = dfm.get_positions()
-
-        geom_id = self.scene.mj_geom_index[self.scene.rigid_body_names.index(rigidbody_name)]
-        if geom_id is not None:
-            x = _mj_data_helper.get_local_coodinate(x, self.mujoco_data.geom_xmat[geom_id].reshape(3, 3), self.mujoco_data.geom_xpos[geom_id])
-        return x 
+        return _mj_data_helper.get_local_coodinate(
+            positions,
+            self.mujoco_data.geom_xmat[geom_id].reshape(3, 3),
+            self.mujoco_data.geom_xpos[geom_id],
+        )
 
     def get_deformable_body_stress(self, dfm_name):
-        dfm = self.scene.deformable_bodies[self.scene.deformable_body_names.index(dfm_name)]
-        return dfm.get_stress_map()
+        return self._deformable_body_by_name[dfm_name].get_stress_map()
 
-    def reset_deformable_body_to_connected_pos(self, rigid_body_name, dfm_name ):
+    def reset_deformable_body_to_connected_pos(self, rigid_body_name, dfm_name):
+        deformable_body = self._deformable_body_by_name[dfm_name]
+
         for connect_info in self.scene.connect_infos:
-            if connect_info.object0==rigid_body_name and connect_info.object1 == dfm_name:
-                dfm_body = self.scene.deformable_bodies[self.scene.deformable_body_names.index(dfm_name)]
+            if connect_info.object0 != rigid_body_name or connect_info.object1 != dfm_name:
+                continue
 
-                geom_id = self.scene.mj_geom_index[self.scene.rigid_body_names.index(rigid_body_name)]
-                geom_pos = self.mujoco_data.geom_xpos[geom_id]
-                geom_mat = self.mujoco_data.geom_xmat[geom_id].reshape(3, 3)
-                pos = _mj_data_helper.get_world_coodinate(connect_info.data0, geom_mat, geom_pos)
-                dfm_body.set_positions(pos, np.arange(len(pos)))
+            geom_id = self._rigid_body_geom_by_name[rigid_body_name]
+            world_pos = self._rigid_local_to_world(connect_info.data0, geom_id)
+            deformable_body.set_positions(world_pos, np.arange(len(world_pos)))
+
+    def _cache_scene_lookups(self):
+        scene = self.scene
+
+        self._deformable_body_by_name = dict(
+            zip(scene.deformable_body_names, scene.deformable_bodies)
+        )
+        self._deformable_body_used_verts_by_name = dict(
+            zip(
+                scene.deformable_body_names,
+                scene.used_vert_of_deformable_body_collision_faces,
+            )
+        )
+        self._rigid_body_geom_by_name = dict(zip(scene.rigid_body_names, scene.mj_geom_index))
+        self._deformable_body_flex_name_by_name = {
+            name: self._deformable_body_xml_name(name)
+            for name in scene.deformable_body_names
+        }
+
+    def _build_deformable_rigid_attachments(self):
+        attachments = []
+
+        for connect_info in self.scene.connect_infos:
+            if not connect_info.is_deformable_body_attatch_to_rigid_body():
+                continue
+
+            attachments.append(
+                _DeformableRigidAttachment(
+                    deformable_body=self._deformable_body_by_name[connect_info.object1],
+                    rigid_geom_id=self._rigid_body_geom_by_name[connect_info.object0],
+                    local_coords=np.asarray(connect_info.data0),
+                    vertex_indices=np.asarray(connect_info.data1),
+                )
+            )
+
+        return attachments
+
+    def _iter_rigid_body_geoms(self):
+        for index, (rigid_body, geom_id) in enumerate(
+            zip(self.scene.rigid_bodies, self.scene.mj_geom_index)
+        ):
+            if geom_id is not None:
+                yield index, rigid_body, geom_id
+
+    def _fetch_s3d_outputs(self, include_stress):
+        output_vars = [
+            sim.OutputVars.Positions,
+            sim.OutputVars.Transforms,
+            sim.OutputVars.CollisionForceRigidBoydCloth,
+        ]
+        if include_stress:
+            output_vars.extend(
+                [
+                    sim.OutputVars.AvatarStressMapObstacle,
+                    sim.OutputVars.AvatarStressMapCloth,
+                ]
+            )
+
+        self.scene.world.fetch_sim(0, output_vars)
+
+    def _copy_cloth_positions_to_mujoco(self):
+        for cloth, cloth_name in zip(self.scene.sim_cloth, self.scene.cloth_names):
+            _mj_data_helper.set_flex_positions(
+                self.mujoco_model,
+                self.mujoco_data,
+                cloth_name,
+                cloth.get_positions(),
+            )
+
+    def _copy_deformable_body_positions_to_mujoco(self):
+        for dfm_name, deformable_body in zip(
+            self.scene.deformable_body_names,
+            self.scene.deformable_bodies,
+        ):
+            used_verts = self._deformable_body_used_verts_by_name[dfm_name]
+            flex_name = self._deformable_body_flex_name_by_name[dfm_name]
+            positions = deformable_body.get_positions()[used_verts]
+
+            _mj_data_helper.set_flex_positions(
+                self.mujoco_model,
+                self.mujoco_data,
+                flex_name,
+                positions,
+            )
+
+    def _update_attached_deformable_bodies(self):
+        for attachment in self._attachments:
+            world_pos = self._rigid_local_to_world(
+                attachment.local_coords,
+                attachment.rigid_geom_id,
+            )
+            attachment.deformable_body.set_positions(
+                world_pos[attachment.vertex_indices],
+                attachment.vertex_indices,
+            )
+
+    def _rigid_local_to_world(self, local_coords, geom_id):
+        return _mj_data_helper.get_world_coodinate(
+            local_coords,
+            self.mujoco_data.geom_xmat[geom_id].reshape(3, 3),
+            self.mujoco_data.geom_xpos[geom_id],
+        )
 
     @staticmethod
-    def _update_connects(mujoco_model, mujoco_data, scene):
-        for connect_info in scene.connect_infos:
-            if connect_info.is_deformable_body_attatch_to_rigid_body():
-
-                dfm_name = connect_info.object1
-                dfm_body = scene.deformable_bodies[scene.deformable_body_names.index(dfm_name)]
-
-                geom_name = connect_info.object0
-                local_coords = connect_info.data0
-
-                geom_id = scene.mj_geom_index[scene.rigid_body_names.index(geom_name)]
-                geom_pos = mujoco_data.geom_xpos[geom_id]
-                geom_mat = mujoco_data.geom_xmat[geom_id].reshape(3, 3)
-
-                pos = _mj_data_helper.get_world_coodinate(local_coords, geom_mat, geom_pos)
-                indices = connect_info.data1
-                dfm_body.set_positions(pos[indices], indices)
+    def _deformable_body_xml_name(dfm_name):
+        return s3d_scene_builder._name_2_xml_name(
+            s3d_scene_builder.xml_prefix_deformable_body,
+            dfm_name,
+        )

@@ -22,42 +22,6 @@ import json
 import time
 import matplotlib.pyplot as plt
 
-curr_folder = Path(__file__).parent
-login_file = curr_folder.parent.parent / 'simulation_login.json'
-s3d_mj.log_in_simulation(login_file=login_file) # this line is optional, but a login prompt will pop up latter
-
-######### rigidbodies
-s3d_scene_builder = s3d_scene_builder.s3d_scene_builder()
-s3d_scene_builder.add_mjcf_rigidbodies(curr_folder/'xml_projects/TactiSim/DexHand_dfm_finger.xml')
-
-######### finger tip
-dfm_file = curr_folder/'xml_projects/TactiSim/meshes/dfm_fingertip.vtk'
-dfm_attrib = s3d_scene_builder.add_deformable_body_by_file(dfm_file)
-dfm_attrib.attrib.youngsModulus = 1e7
-#dfm_attrib.get_rest_pos = lambda  x: x # alter rest pos
-dfm_attrib.get_pos = lambda  x: x # alter current pos
-_, dfm_tets = load_tetrahedrons(dfm_file)
-dfm_faces, _ = compute_boundary_faces(dfm_tets)
-
-########## tets
-#dfm_attrib = s3d_scene_builder.add_deformable_body_by_file(curr_folder/'xml_projects/piper_secription/tets1.vtk')
-#dfm_attrib.attrib.youngsModulus = 1e6
-##dfm_attrib.get_rest_pos = lambda  x: x # alter rest pos
-#dfm_attrib.get_pos = lambda  x: x + np.array([0,0.2,0.6]) # alter current pos
-
-########### cloth
-##cloth_builder = s3d_scene_builder.add_cloth_by_file( curr_folder / 'xml_projects' / 'clothes'/ '50k_plane.obj')
-##cloth_builder = s3d_scene_builder.add_cloth_by_file( curr_folder / 'xml_projects' / 'TactiSim'/ 'meshes' / 'my_cylinder.obj')
-#cloth_builder.translate = np.array([-0.8, -2.0, 0.25])
-#cloth_builder.quat = np.array([1,0,0,0])
-
-######### connects
-s3d_scene_builder.add_connect(curr_folder/'xml_projects/TactiSim/meshes/connect_finger_tip.json')
-#s3d_scene_builder.add_connect(curr_folder/'xml_projects/TactiSim/meshes/connect_tet.json')
-
-m, d, s = s3d_scene_builder.build()
-l_s3d_scene_stepper = s3d_scene_stepper.s3d_scene_stepper(m,d,s)
-
 ################################################
 class controller:
 
@@ -169,7 +133,7 @@ class stress_viewer:
         #self.dfm_scatter.set_clim(dfm_cmin, dfm_cmax)
         self.dfm_scatter.set_clim(0, 1e4)
         
-        self.fig.canvas.draw()  # Redraw the figure
+        self.fig.canvas.draw_idle()  # Redraw the figure when the GUI loop is ready.
         self.fig.canvas.flush_events()
 
 
@@ -208,6 +172,48 @@ def key_callback(keycode):
 
 ################################################
 
+VIEWER_SYNC_INTERVAL = 1
+STRESS_VIEWER_ENABLED = True
+STRESS_VIEWER_INTERVAL = 10
+FPS_LOG_INTERVAL = 120
+
+curr_folder = Path(__file__).parent
+login_file = curr_folder.parent.parent / 'simulation_login.json'
+s3d_mj.log_in_simulation(login_file=login_file) # this line is optional, but a login prompt will pop up latter
+
+######### rigidbodies
+s3d_scene_builder = s3d_scene_builder.s3d_scene_builder()
+s3d_scene_builder.add_mjcf_rigidbodies(curr_folder/'xml_projects/TactiSim/DexHand_dfm_finger.xml')
+
+######### finger tip
+dfm_file = curr_folder/'xml_projects/TactiSim/meshes/dfm_fingertip.vtk'
+dfm_attrib = s3d_scene_builder.add_deformable_body_by_file(dfm_file)
+dfm_attrib.attrib.youngsModulus = 1e7
+#dfm_attrib.get_rest_pos = lambda  x: x # alter rest pos
+dfm_attrib.get_pos = lambda  x: x # alter current pos
+_, dfm_tets = load_tetrahedrons(dfm_file)
+dfm_faces, _ = compute_boundary_faces(dfm_tets)
+
+########## tets
+#dfm_attrib = s3d_scene_builder.add_deformable_body_by_file(curr_folder/'xml_projects/piper_secription/tets1.vtk')
+#dfm_attrib.attrib.youngsModulus = 1e6
+##dfm_attrib.get_rest_pos = lambda  x: x # alter rest pos
+#dfm_attrib.get_pos = lambda  x: x + np.array([0,0.2,0.6]) # alter current pos
+
+########### cloth
+##cloth_builder = s3d_scene_builder.add_cloth_by_file( curr_folder / 'xml_projects' / 'clothes'/ '50k_plane.obj')
+##cloth_builder = s3d_scene_builder.add_cloth_by_file( curr_folder / 'xml_projects' / 'TactiSim'/ 'meshes' / 'my_cylinder.obj')
+#cloth_builder.translate = np.array([-0.8, -2.0, 0.25])
+#cloth_builder.quat = np.array([1,0,0,0])
+
+######### connects
+s3d_scene_builder.add_connect(curr_folder/'xml_projects/TactiSim/meshes/connect_finger_tip.json')
+#s3d_scene_builder.add_connect(curr_folder/'xml_projects/TactiSim/meshes/connect_tet.json')
+
+m, d, s = s3d_scene_builder.build()
+l_s3d_scene_stepper = s3d_scene_stepper.s3d_scene_stepper(m,d,s)
+
+
 ctrller = controller()
 
 ctrller.set_to_final(m,d)
@@ -215,11 +221,12 @@ ctrller.set_to_final(m,d)
 l_s3d_scene_stepper.reset_deformable_body_to_connected_pos('l_f_link5_4/l_f_link5_4','dfm_fingertip')
 
 
-s_viewer = stress_viewer()
+s_viewer = stress_viewer() if STRESS_VIEWER_ENABLED else None
 
 with mujoco.viewer.launch_passive(m, d, key_callback = key_callback) as viewer:
 
     fi = 0
+    fps_t0 = time.perf_counter()
 
     while viewer.is_running():
 
@@ -229,11 +236,19 @@ with mujoco.viewer.launch_passive(m, d, key_callback = key_callback) as viewer:
 
         l_s3d_scene_stepper.set_rigidbody_pos_mj_2_s3d()
         l_s3d_scene_stepper.step_s3d()
-        l_s3d_scene_stepper.set_cloth_pos_s3d_2_mj()
-        
-        s_viewer.update(l_s3d_scene_stepper)
+        update_stress_viewer = s_viewer is not None and fi % STRESS_VIEWER_INTERVAL == 0
+        l_s3d_scene_stepper.set_cloth_pos_s3d_2_mj(include_stress=update_stress_viewer)
 
-        viewer.sync()
+        if update_stress_viewer:
+            s_viewer.update(l_s3d_scene_stepper)
+
+        if fi % VIEWER_SYNC_INTERVAL == 0:
+            viewer.sync()
+
+        if FPS_LOG_INTERVAL > 0 and fi > 0 and fi % FPS_LOG_INTERVAL == 0:
+            now = time.perf_counter()
+            print(f'fps: {FPS_LOG_INTERVAL / (now - fps_t0):.2f}')
+            fps_t0 = now
 
         fi += 1
 
