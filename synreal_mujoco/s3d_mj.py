@@ -80,7 +80,7 @@ def log_in_simulation(**kwargs):
     else:
         print('login failed')
 
-def get_a_sim_world(m):
+def get_a_sim_world(m, attrib_setter = lambda x: x):
 
     log_in_simulation()
 
@@ -97,7 +97,9 @@ def get_a_sim_world(m):
     world_attrib.enable_plastic_bending = False
     world_attrib.enable_volume_conserve = False
     world_attrib.enable_deformable_body_stress_map = True
+    #world_attrib.iterations = 50
 
+    attrib_setter(world_attrib)
 
     world.set_attrib(world_attrib)
 
@@ -107,7 +109,6 @@ def get_a_sim_world(m):
 
 
 def load_data(xml_path):
-    # TODO: crash here ,find out why 
     m = mujoco.MjModel.from_xml_path(xml_path)
     d = mujoco.MjData(m)
     mujoco.mj_forward(m, d)  # so that d is populated by m

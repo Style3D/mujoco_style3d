@@ -17,6 +17,8 @@ import synreal_mujoco.s3d_scene_stepper as s3d_scene_stepper
 import synreal_mujoco._mj_data_helper as _mj_data_helper
 from synreal_mujoco._deformable_data_helper import load_tetrahedrons, compute_boundary_faces
 
+import synreal_sim as sim
+
 from pathlib import Path
 import json
 import time
@@ -181,14 +183,22 @@ curr_folder = Path(__file__).parent
 login_file = curr_folder.parent.parent / 'simulation_login.json'
 s3d_mj.log_in_simulation(login_file=login_file) # this line is optional, but a login prompt will pop up latter
 
+######### world
+def set_world_attrib(world_attrib:sim.WorldAttrib):
+    world_attrib.time_step = 1/20
+
+s3d_scene_builder = s3d_scene_builder.s3d_scene_builder(world_attrib_setter=set_world_attrib)
+
 ######### rigidbodies
-s3d_scene_builder = s3d_scene_builder.s3d_scene_builder()
 s3d_scene_builder.add_mjcf_rigidbodies(curr_folder/'xml_projects/TactiSim/DexHand_dfm_finger.xml')
 
 ######### finger tip
 dfm_file = curr_folder/'xml_projects/TactiSim/meshes/dfm_fingertip.vtk'
 dfm_attrib = s3d_scene_builder.add_deformable_body_by_file(dfm_file)
-dfm_attrib.attrib.youngsModulus = 1e7
+dfm_attrib.attrib.youngsModulus = 1e6
+dfm_attrib.attrib.poissonRatio = 0.47
+dfm_attrib.attrib.density = 1000
+dfm_attrib.attrib.surfaceOffsets = 1e-3
 #dfm_attrib.get_rest_pos = lambda  x: x # alter rest pos
 dfm_attrib.get_pos = lambda  x: x # alter current pos
 _, dfm_tets = load_tetrahedrons(dfm_file)

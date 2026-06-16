@@ -45,7 +45,10 @@ def _xml_name_2_name(prefix, obj_file):
     return file_base_name.removeprefix(prefix+'_')
 
 class s3d_scene_builder:
-    def __init__(self  ):
+    def __init__(self, world_attrib_setter = lambda x:x  ):
+
+        # world
+        self.world_attrib_setter = world_attrib_setter
 
         # deformable body
         self.deformable_body_files : List[str] = []
@@ -282,7 +285,7 @@ class s3d_scene_builder:
             os.remove(path)
         self._temp_files.clear()
 
-        scene.world = s3d_mj.get_a_sim_world(m)
+        scene.world = s3d_mj.get_a_sim_world(m, self.world_attrib_setter)
 
         s3d_scene_builder._add_rigid_body_to_scene(scene, m, d, self.rigidbody_builder_fn )
 
