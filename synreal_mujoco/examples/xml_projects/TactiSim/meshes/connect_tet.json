@@ -1,0 +1,17 @@
+{
+    "object0": {
+        "name": "l_f_link5_4/l_f_link5_4",
+        "object_type": "rigid_body",
+        "data_type": "frame",
+        "data": ""
+    },
+
+    "object1": {
+        "name": "tets1",
+        "object_type": "deformable_body",
+        "data_type": "verts",
+        "data": [
+            0
+                   ]
+    }
+}

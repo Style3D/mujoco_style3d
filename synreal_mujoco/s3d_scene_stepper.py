@@ -45,8 +45,8 @@ class s3d_scene_stepper:
         for dfm, dfm_name, used_verts in zip(self.scene.deformable_bodies, self.scene.deformable_body_names, self.scene.used_vert_of_deformable_body_collision_faces):
             x = dfm.get_positions()
             x = x[used_verts]
-            _mj_data_helper.set_flex_positions(self.mujoco_model, self.mujoco_data, dfm_name, x)
-
+            name = s3d_scene_builder._name_2_xml_name(s3d_scene_builder.xml_prefix_deformable_body, dfm_name)
+            _mj_data_helper.set_flex_positions(self.mujoco_model, self.mujoco_data, name, x)
 
     def get_deformable_body_positions_in_rigidbody_frame(self, dfm_name, rigidbody_name):
 

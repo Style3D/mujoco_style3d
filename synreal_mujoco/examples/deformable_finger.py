@@ -30,14 +30,20 @@ s3d_mj.log_in_simulation(login_file=login_file) # this line is optional, but a l
 s3d_scene_builder = s3d_scene_builder.s3d_scene_builder()
 s3d_scene_builder.add_mjcf_rigidbodies(curr_folder/'xml_projects/TactiSim/DexHand_dfm_finger.xml')
 
-######### tets
+######### finger tip
 dfm_file = curr_folder/'xml_projects/TactiSim/meshes/dfm_fingertip.vtk'
 dfm_attrib = s3d_scene_builder.add_deformable_body_by_file(dfm_file)
-dfm_attrib.attrib.youngsModulus = 1e6
+dfm_attrib.attrib.youngsModulus = 1e7
 #dfm_attrib.get_rest_pos = lambda  x: x # alter rest pos
 dfm_attrib.get_pos = lambda  x: x # alter current pos
 _, dfm_tets = load_tetrahedrons(dfm_file)
 dfm_faces, _ = compute_boundary_faces(dfm_tets)
+
+########## tets
+#dfm_attrib = s3d_scene_builder.add_deformable_body_by_file(curr_folder/'xml_projects/piper_secription/tets1.vtk')
+#dfm_attrib.attrib.youngsModulus = 1e6
+##dfm_attrib.get_rest_pos = lambda  x: x # alter rest pos
+#dfm_attrib.get_pos = lambda  x: x + np.array([0,0.2,0.6]) # alter current pos
 
 ########### cloth
 ##cloth_builder = s3d_scene_builder.add_cloth_by_file( curr_folder / 'xml_projects' / 'clothes'/ '50k_plane.obj')
@@ -47,6 +53,7 @@ dfm_faces, _ = compute_boundary_faces(dfm_tets)
 
 ######### connects
 s3d_scene_builder.add_connect(curr_folder/'xml_projects/TactiSim/meshes/connect_finger_tip.json')
+#s3d_scene_builder.add_connect(curr_folder/'xml_projects/TactiSim/meshes/connect_tet.json')
 
 m, d, s = s3d_scene_builder.build()
 l_s3d_scene_stepper = s3d_scene_stepper.s3d_scene_stepper(m,d,s)
@@ -142,8 +149,8 @@ class stress_viewer:
         else:
             dfm_color = dfm_color.ravel()
 
-        dfm_cmin = float(dfm_color.min())
-        dfm_cmax = float(dfm_color.max())
+        #dfm_cmin = float(dfm_color.min())
+        #dfm_cmax = float(dfm_color.max())
         if self.dfm_scatter is None:
             dfm_min = dfm_x.min(axis=0)
             dfm_max = dfm_x.max(axis=0)
@@ -159,7 +166,8 @@ class stress_viewer:
         else:
             self.dfm_scatter._offsets3d = (dfm_x[:, 0], dfm_x[:, 1], dfm_x[:, 2])
             self.dfm_scatter.set_array(dfm_color)
-        self.dfm_scatter.set_clim(dfm_cmin, dfm_cmax)
+        #self.dfm_scatter.set_clim(dfm_cmin, dfm_cmax)
+        self.dfm_scatter.set_clim(0, 1e4)
         
         self.fig.canvas.draw()  # Redraw the figure
         self.fig.canvas.flush_events()

@@ -36,6 +36,14 @@ def _read_uv_from_obj(obj_file):
     return np.asarray(uv, dtype=float)
 
 
+def _name_2_xml_name(prefix, obj_file):
+    file_base_name = str(Path(obj_file).stem)
+    return prefix +'_' + file_base_name
+
+def _xml_name_2_name(prefix, obj_file):
+    file_base_name = str(Path(obj_file).stem)
+    return file_base_name.removeprefix(prefix+'_')
+
 class s3d_scene_builder:
     def __init__(self  ):
 
@@ -101,21 +109,12 @@ class s3d_scene_builder:
     def _get_file_name(obj_file):
         return str(Path(obj_file).stem)
 
-    @staticmethod
-    def _name_2_xml_name(prefix, obj_file):
-        file_base_name = str(Path(obj_file).stem)
-        return prefix +'_' + file_base_name
-
-    @staticmethod
-    def _xml_name_2_name(prefix, obj_file):
-        file_base_name = str(Path(obj_file).stem)
-        return file_base_name.removeprefix(prefix+'_')
 
     @staticmethod
     def _add_cloth_to_scene(s : dc.s3d_scene, m, d , attrib_map, get_cloth_uv, name_start_with_will_considered_cloth):
 
         def __get_attrib (name ):
-           return attrib_map[s3d_scene_builder._xml_name_2_name(xml_prefix_cloth, name)].attrib
+           return attrib_map[_xml_name_2_name(xml_prefix_cloth, name)].attrib
 
         s.sim_cloth, s.cloth_names = s3d_mj._add_cloth_to_sim_2( m, d, s.world,  __get_attrib , get_cloth_uv, name_start_with_will_considered_cloth )
 
@@ -187,7 +186,7 @@ class s3d_scene_builder:
             raise ValueError("No <worldbody> element found in the XML tree")
 
         attrs = {
-            'name': s3d_scene_builder._name_2_xml_name(name_prefix, name),
+            'name': _name_2_xml_name(name_prefix, name),
             'type': 'mesh',
             'pos': f'{pos[0]} {pos[1]} {pos[2]}',
             'quat': f'{quat[0]} {quat[1]} {quat[2]} {quat[3]}',
@@ -288,7 +287,7 @@ class s3d_scene_builder:
         s3d_scene_builder._add_rigid_body_to_scene(scene, m, d, self.rigidbody_builder_fn )
 
         def get_cloth_uv(xml_name):
-            name = self._xml_name_2_name(xml_prefix_cloth,xml_name)
+            name = _xml_name_2_name(xml_prefix_cloth,xml_name)
             return self.cloth_uv[name]
 
         s3d_scene_builder._add_cloth_to_scene(scene, m, d, self.cloth_builder_map, get_cloth_uv, xml_prefix_cloth)
