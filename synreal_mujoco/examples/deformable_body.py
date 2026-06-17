@@ -41,7 +41,7 @@ dfm_attrib.get_pos = lambda  x: x + np.array([0,0,0.7]) # alter current pos
 #cloth_builder.translate = np.array([-0.8, -2.0, 0.25])
 #cloth_builder.quat = np.array([1,0,0,0])
 
-m,d,s = s3d_scene_builder.build()
+m, d, s = s3d_scene_builder.build()
 
 l_s3d_scene_stepper = s3d_scene_stepper.s3d_scene_stepper(m,d,s)
 

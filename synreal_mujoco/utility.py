@@ -1,21 +1,23 @@
-
+import numpy as np
 
 def report_deprecated(func):
     print(f' !!!: "{func.__name__}" is deprecated. will be removed in a future release. !!!')
 
-class kwargs_helper:
-    def __init__(self, kwargs):
-        self.kwargs = kwargs
-        self.allowed_keys = set()
 
-    def __enter__(self):
-        return self
+def write_obj(pos, faces, obj_path: str) -> None:
+    with open(obj_path, 'w') as f:
+        for v in pos:
+            f.write(f'v {v[0]} {v[1]} {v[2]}\n')
+        for face in faces:
+            f.write(f'f {face[0]+1} {face[1]+1} {face[2]+1}\n')
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        for key in self.kwargs.keys():
-            if key not in self.allowed_keys:
-                raise ValueError(f' !!!: "{key}" is not a valid argument. !!!')
 
-    def get(self, key, default_value):
-        self.allowed_keys.add(key)
-        return self.kwargs.get(key, default_value)
+
+def read_uv_from_obj(obj_file):
+    uv = []
+    with open(obj_file, 'r') as f:
+        for line in f:
+            if line[:3] == 'vt ':
+                values = line.split()
+                uv.append((float(values[1]), float(values[2])))
+    return np.asarray(uv, dtype=float)

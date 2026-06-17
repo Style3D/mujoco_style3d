@@ -20,7 +20,6 @@ from synreal_mujoco._deformable_data_helper import load_tetrahedrons, compute_bo
 import synreal_sim as sim
 
 from pathlib import Path
-import json
 import time
 import matplotlib.pyplot as plt
 
@@ -187,7 +186,7 @@ s3d_mj.log_in_simulation(login_file=login_file) # this line is optional, but a l
 def set_world_attrib(world_attrib:sim.WorldAttrib):
     world_attrib.time_step = 1/20
 
-s3d_scene_builder = s3d_scene_builder.s3d_scene_builder(world_attrib_setter=set_world_attrib)
+s3d_scene_builder = s3d_scene_builder.s3d_scene_builder( world_attrib_setter = set_world_attrib )
 
 ######### rigidbodies
 s3d_scene_builder.add_mjcf_rigidbodies(curr_folder/'xml_projects/TactiSim/DexHand_dfm_finger.xml')
@@ -229,7 +228,6 @@ ctrller = controller()
 ctrller.set_to_final(m,d)
 
 l_s3d_scene_stepper.reset_deformable_body_to_connected_pos('l_f_link5_4/l_f_link5_4','dfm_fingertip')
-
 
 s_viewer = stress_viewer() if STRESS_VIEWER_ENABLED else None
 

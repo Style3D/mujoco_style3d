@@ -12,6 +12,7 @@ import synreal_mujoco.s3d_mj as s3d_mj
 import synreal_mujoco.smj as smj
 from synreal_mujoco import cloth_property
 import synreal_mujoco.data_classes as dc
+import synreal_mujoco.utility as utility
 
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -19,21 +20,10 @@ import os
 import json
 import mujoco
 
-from synreal_mujoco.utility import kwargs_helper
-
 
 xml_prefix_cloth = 'cloth'
 xml_prefix_deformable_body = 'dfm'
 
-
-def _read_uv_from_obj(obj_file):
-    uv = []
-    with open(obj_file, 'r') as f:
-        for line in f:
-            if line[:3] == 'vt ':
-                values = line.split()
-                uv.append((float(values[1]), float(values[2])))
-    return np.asarray(uv, dtype=float)
 
 
 def _name_2_xml_name(prefix, obj_file):
@@ -71,15 +61,9 @@ class s3d_scene_builder:
 
 
     # mujoco mjcf
-
-    # attrib_setter : lambda (rigidbody_name) -> rigidbody_attrib
-    # note: set attrib with setter is for performance reason, so that the mjcf file can be loaded later instead of load here right away
-    #def add_mjcf_rigidbodies( self, filename, rigidbody_builder : Callable[[str, dc.rigid_body_builder],None ]= None ):
-    def add_mjcf_rigidbodies( self, filename, **kwargs ):
+    def add_mjcf_rigidbodies( self, filename, rigidbody_builder_fn = lambda name,attrib:attrib ):
         self.mjcf_file = filename
-        #TODO: fix this, runtime error
-        with kwargs_helper(kwargs) as kw_helper:
-            self.rigidbody_builder_fn = kw_helper.get('rigidbody_builder_fn', lambda name, rigidbody_builder : None)
+        self.rigidbody_builder_fn = rigidbody_builder_fn
 
     # clothes
     def add_cloth_by_file(self, filename, use_uv = False):
@@ -103,6 +87,49 @@ class s3d_scene_builder:
         self.connect_files.append(filename)
 
 
+    # build
+    def build(self ):
+
+        scene = dc.s3d_scene()
+
+        dfm_bodies_param = self._add_flex_to_mjcf(scene)
+
+        self._compute_cloth_uv()
+
+        m, d = s3d_mj.load_data(self.flexed_mjcf_file)
+
+        for path in self._temp_files:
+            os.remove(path)
+        self._temp_files.clear()
+
+        scene.world = s3d_mj.get_a_sim_world(m, self.world_attrib_setter)
+
+        s3d_scene_builder._add_rigid_body_to_scene(scene, m, d, self.rigidbody_builder_fn )
+
+        def get_cloth_uv(xml_name):
+            name = _xml_name_2_name(xml_prefix_cloth,xml_name)
+            return self.cloth_uv[name]
+
+        s3d_scene_builder._add_cloth_to_scene(scene, m, d, self.cloth_builder_map, get_cloth_uv, xml_prefix_cloth)
+
+        self._add_deformable_body_to_scene(scene, dfm_bodies_param)
+
+        self._add_connects_to_scene(scene, m)
+
+        collision_force = []
+        scene.mapper = smj.s3d_mj_mapper (
+            scene.world,
+            scene.sim_cloth,
+            scene.cloth_names,
+            scene.rigid_bodies,
+            scene.mj_rb_index,
+            collision_force
+        )
+
+        return m, d, scene
+
+
+
     @staticmethod
     def _add_rigid_body_to_scene(s : dc.s3d_scene, m, d, rigidbody_builder_fn : Callable[[str,dc.rigid_body_builder], None ]):
         s.rigid_bodies, s.mj_rb_index, s.mj_geom_index, s.mj_mesh_index, s.rigid_body_names = s3d_mj._add_rigid_body_to_sim(m, d, s.world, rigidbody_builder_fn)
@@ -124,15 +151,48 @@ class s3d_scene_builder:
 
     def _add_deformable_body_to_scene(self, scene : dc.s3d_scene, dfm_body_params):
         scene.deformable_bodies = []
-        for dfm in dfm_body_params:
-            obj = sim.DeformableBody(dfm.pos , dfm.collision_faces, dfm.tets, dfm.rest_pos)
-            obj.set_attrib(dfm.attrib)
-            scene.deformable_bodies.append(obj)
-            scene.used_vert_of_deformable_body_collision_faces.append(dfm.used_vert_of_deformable_body_collision_faces)
-            scene.deformable_body_collision_faces.append(dfm.collision_faces)
-            obj.attach(scene.world)
+        for dfm_body_param in dfm_body_params:
+            dfm = sim.DeformableBody(dfm_body_param.pos , dfm_body_param.collision_faces, dfm_body_param.tets, dfm_body_param.rest_pos)
+            dfm.set_attrib(dfm_body_param.attrib)
+            scene.deformable_bodies.append(dfm)
+            scene.used_vert_of_deformable_body_collision_faces.append(dfm_body_param.used_vert_of_deformable_body_collision_faces)
+            scene.deformable_body_collision_faces.append(dfm_body_param.collision_faces)
+            dfm.attach(scene.world)
 
-    def _add_connects_to_scene(self, scene : dc.s3d_scene, m, d):
+    def _set_connect_dfm_fixed(self, connect_info, scene : dc.s3d_scene):
+        dfm_name = connect_info.object1
+        fixed_verts = connect_info.data1
+        dfm_body = scene.deformable_bodies[scene.deformable_body_names.index(dfm_name)]
+        flags = np.array([True for _ in range(len(fixed_verts))])
+        dfm_body.set_pin(flags, fixed_verts)
+
+    def _compute_connect_dfm_local_coord(self, connect_info, scene : dc.s3d_scene, m):
+        rb_name = connect_info.object0
+        dfm_name = connect_info.object1
+
+        dfm_body = scene.deformable_bodies[scene.deformable_body_names.index(dfm_name)]
+        dfm_x = dfm_body.get_positions()
+
+        mesh_id = scene.mj_mesh_index[scene.rigid_body_names.index(rb_name)]
+        mesh_quat = m.mesh_quat[mesh_id]
+        mesh_center = m.mesh_pos[mesh_id]
+        mesh_rot = np.empty(9)
+        mujoco.mju_quat2Mat(mesh_rot, mesh_quat)
+        mesh_rot = mesh_rot.reshape(3, 3)
+        connect_info.data0 = _mj_data_helper.get_local_coodinate(dfm_x, mesh_rot, mesh_center)
+
+    @staticmethod
+    def _populate_connect_info(connect_info,object0,object1):
+        connect_info.object0 = object0['name']
+        connect_info.object1 = object1['name']
+        connect_info.object_type0 = object0['object_type']
+        connect_info.object_type1 = object1['object_type']
+        connect_info.data_type0 = object0['data_type']
+        connect_info.data_type1 = object1['data_type']
+        connect_info.data0 = object0['data']
+        connect_info.data1 = object1['data']
+
+    def _add_connects_to_scene(self, scene : dc.s3d_scene, m):
         scene.connect_infos = []
         for connect_file in self.connect_files:
             with open(connect_file, 'r') as f:
@@ -142,43 +202,13 @@ class s3d_scene_builder:
             object1 = data['object1']
 
             connect_info = dc.connect_info()
-            connect_info.object0 = object0['name']
-            connect_info.object1 = object1['name']
-            connect_info.object_type0 = object0['object_type']
-            connect_info.object_type1 = object1['object_type']
-            connect_info.data_type0 = object0['data_type']
-            connect_info.data_type1 = object1['data_type']
-            connect_info.data0 = object0['data']
-            connect_info.data1 = object1['data']
+            s3d_scene_builder._populate_connect_info(connect_info,object0,object1)
             scene.connect_infos.append(connect_info)
 
             if connect_info.is_deformable_body_attatch_to_rigid_body():
-                dfm_name = connect_info.object1
-                fixed_verts = connect_info.data1
-                dfm_body = scene.deformable_bodies[scene.deformable_body_names.index(dfm_name)]
-                flags = np.array([True for _ in range(len(fixed_verts))])
-                dfm_body.set_pin(flags, fixed_verts)
+                self._set_connect_dfm_fixed(connect_info, scene)
+                self._compute_connect_dfm_local_coord(connect_info,scene,m)
 
-                rb_name = connect_info.object0
-
-                dfm_x = dfm_body.get_positions()
-
-                mesh_id = scene.mj_mesh_index[scene.rigid_body_names.index(rb_name)]
-                mesh_quat = m.mesh_quat[mesh_id]
-                mesh_center = m.mesh_pos[mesh_id]
-                mesh_rot = np.empty(9)
-                mujoco.mju_quat2Mat(mesh_rot, mesh_quat)
-                mesh_rot = mesh_rot.reshape(3, 3)
-                connect_info.data0 = _mj_data_helper.get_local_coodinate(dfm_x, mesh_rot, mesh_center)
-
-
-    @staticmethod
-    def _export_surface_to_obj(pos, faces, obj_path: str) -> None:
-        with open(obj_path, 'w') as f:
-            for v in pos:
-                f.write(f'v {v[0]} {v[1]} {v[2]}\n')
-            for face in faces:
-                f.write(f'f {face[0]+1} {face[1]+1} {face[2]+1}\n')
 
     @staticmethod
     def _add_flexcomp_to_worldbody(tree: ET.ElementTree, name_prefix:str, name:str, file: str, pos,quat,rgba, **attribs) -> None:
@@ -204,13 +234,13 @@ class s3d_scene_builder:
         elem.text = '\n        '  # forces explicit </flexcomp> closing tag instead of />
         elem.tail = '\n\n    '    # newline between </flexcomp> and </worldbody>
 
-    def _add_flex_cloth(self,tree):
+    def _add_flex_cloth(self, tree):
         for cloth_file in self.cloth_files:
             name = s3d_scene_builder._get_file_name(cloth_file)
             cloth_builder = self.cloth_builder_map[name]
             s3d_scene_builder._add_flexcomp_to_worldbody(tree, xml_prefix_cloth, name, cloth_file,cloth_builder.translate,cloth_builder.quat,cloth_builder.rgba)
 
-    def _add_flex_deformable_body(self,tree, mjcf_name, s : dc.s3d_scene):
+    def _add_flex_deformable_body(self, tree, mjcf_name, s : dc.s3d_scene):
         deformable_bodies_param=[]
         s.deformable_body_names =[]
         for i, dfm_file in enumerate(self.deformable_body_files):
@@ -224,7 +254,7 @@ class s3d_scene_builder:
 
             temp_obj_path = mjcf_name + f'_{xml_prefix_deformable_body}_{i}.obj'
             temp_obj_path = Path(temp_obj_path).as_posix()  
-            s3d_scene_builder._export_surface_to_obj(curr_pos[used_vert_of_deformable_body_collision_faces], faces, temp_obj_path)  # export before offset mutates pos
+            utility.write_obj(curr_pos[used_vert_of_deformable_body_collision_faces], faces, temp_obj_path)  # export before offset mutates pos
             self._temp_files.append(temp_obj_path)
 
             name = s3d_scene_builder._get_file_name(dfm_file)
@@ -264,49 +294,9 @@ class s3d_scene_builder:
 
             uv = []
             if str(cloth_file.suffix) == '.obj':
-                uv = _read_uv_from_obj(cloth_file)
+                uv = utility.read_uv_from_obj(cloth_file)
             if len(uv) == 0:
                 self.cloth_uv[name] = None
             else:
                 self.cloth_uv[name] = uv
 
-    # build
-    def build(self ):
-
-        scene = dc.s3d_scene()
-
-        dfm_bodies_param = self._add_flex_to_mjcf(scene)
-
-        self._compute_cloth_uv()
-
-        m, d = s3d_mj.load_data(self.flexed_mjcf_file)
-
-        for path in self._temp_files:
-            os.remove(path)
-        self._temp_files.clear()
-
-        scene.world = s3d_mj.get_a_sim_world(m, self.world_attrib_setter)
-
-        s3d_scene_builder._add_rigid_body_to_scene(scene, m, d, self.rigidbody_builder_fn )
-
-        def get_cloth_uv(xml_name):
-            name = _xml_name_2_name(xml_prefix_cloth,xml_name)
-            return self.cloth_uv[name]
-
-        s3d_scene_builder._add_cloth_to_scene(scene, m, d, self.cloth_builder_map, get_cloth_uv, xml_prefix_cloth)
-
-        self._add_deformable_body_to_scene(scene, dfm_bodies_param)
-
-        self._add_connects_to_scene(scene, m, d)
-
-        collision_force = []
-        scene.mapper = smj.s3d_mj_mapper (
-            scene.world,
-            scene.sim_cloth,
-            scene.cloth_names,
-            scene.rigid_bodies,
-            scene.mj_rb_index,
-            collision_force
-        )
-
-        return m, d, scene

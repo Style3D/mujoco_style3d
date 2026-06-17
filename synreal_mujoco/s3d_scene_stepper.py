@@ -65,6 +65,7 @@ class s3d_scene_stepper:
         self._copy_cloth_positions_to_mujoco()
         self._copy_deformable_body_positions_to_mujoco()
 
+    #################  deformable body stress related methods
     def get_deformable_body_positions_in_rigidbody_frame(self, dfm_name, rigidbody_name):
         positions = self._deformable_body_by_name[dfm_name].get_positions()
         geom_id = self._rigid_body_geom_by_name[rigidbody_name]
@@ -91,6 +92,8 @@ class s3d_scene_stepper:
             geom_id = self._rigid_body_geom_by_name[rigid_body_name]
             world_pos = self._rigid_local_to_world(connect_info.data0, geom_id)
             deformable_body.set_positions(world_pos, np.arange(len(world_pos)))
+
+    #################  end deformable body stress related methods 
 
     def _cache_scene_lookups(self):
         scene = self.scene
